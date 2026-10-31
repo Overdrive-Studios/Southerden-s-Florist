@@ -344,3 +344,9 @@ summary::after{color:var(--leaf)}
 .xdots{display:flex;justify-content:center;gap:6px;margin-top:10px}
 .xdots span{width:7px;height:7px;border-radius:50%;background:var(--line)}
 .xdots span.on{background:var(--leaf);width:18px;border-radius:4px}
+/* Community partner logos */
+a.comm{display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:box-shadow .2s,transform .2s}
+a.comm:hover{box-shadow:var(--shadow);transform:translateY(-3px)}
+.comm-logo{height:110px;display:flex;align-items:center;justify-content:center;margin:-6px 0 18px;padding:10px;border-bottom:1px solid var(--line)}
+.comm-logo img{max-height:90px;max-width:100%;width:auto;object-fit:contain}
+.comm .more{font-weight:600;color:var(--green-2);font-size:.9rem;margin-top:auto;padding-top:6px}

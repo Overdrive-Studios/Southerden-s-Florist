@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/fetch-photos.yml
       - images/download-photos.py
+      - images/partners/download-logos.py
 
 permissions:
   contents: write
@@ -19,7 +20,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Download photos
-        run: python3 images/download-photos.py
+        run: |
+          python3 images/download-photos.py
+          python3 images/partners/download-logos.py
       - name: Commit photos
         run: |
           git config user.name "github-actions[bot]"
