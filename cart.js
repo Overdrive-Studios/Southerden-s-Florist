@@ -79,8 +79,8 @@
     }
     var hasFlowers = c.some(function (i) { return !i.extra; });
     var inCart = {}; c.forEach(function (i) { inCart[i.id] = 1; });
-    var strip = "<div class='panel xstrip'><h3>Add something extra?</h3><p class='hint'>Chocolates, a balloon, a plush toy or wine, delivered with your flowers.</p><div class='xgrid'>" +
-      X.map(function (x) { return extraCard(x, inCart[x.id]); }).join("") + "</div></div>";
+    var strip = "<div class='panel xstrip'><h3>Add something extra?</h3><p class='hint'>Chocolates, a balloon, a plush toy or wine, delivered with your flowers.</p><div class='xscroll'><button type='button' class='xarrow xprev' aria-label='Previous extras'>‹</button><div class='xgrid'>" +
+      X.map(function (x) { return extraCard(x, inCart[x.id]); }).join("") + "</div><button type='button' class='xarrow xnext' aria-label='More extras'>›</button></div><div class='xdots'></div></div>";
     var lines = c.map(function (i, k) {
       return "<div class='line'><span class='art'><img src='" + root + "images/" + esc(i.img) + "' alt='' onerror='this.remove()'></span>" +
         "<div><h4>" + esc(i.name) + "</h4><div style='margin-top:6px'><span class='qty'><button type='button' data-l='" + k + "' data-d='-1' aria-label='Less'>−</button><input value='" + i.qty + "' readonly aria-label='Quantity'><button type='button' data-l='" + k + "' data-d='1' aria-label='More'>+</button></span>" +
@@ -111,6 +111,33 @@
       "<div class='totals'><div><span>Delivery in Toowoomba</span><span>Included</span></div><div class='grand'><span>Total incl. GST</span><span>" + money(total(c)) + "</span></div></div>" +
       "<p class='hint' style='margin-top:12px'>Delivering outside Toowoomba? We'll confirm any extra charge before your order goes out.</p></aside></div>";
     document.getElementById("orderForm").addEventListener("submit", submit);
+    setupScroller();
+  }
+
+  // Arrows + dots so it's obvious there are more extras to see
+  function setupScroller() {
+    var wrap = app.querySelector(".xscroll"); if (!wrap) return;
+    var g = wrap.querySelector(".xgrid"), prev = wrap.querySelector(".xprev"), next = wrap.querySelector(".xnext");
+    var dots = app.querySelector(".xdots");
+    function step() { var c = g.querySelector(".xcard"); return c ? (c.offsetWidth + 10) * 2 : 260; }
+    function update() {
+      var max = g.scrollWidth - g.clientWidth;
+      var scrollable = max > 4;
+      wrap.classList.toggle("can-scroll", scrollable);
+      prev.hidden = !scrollable || g.scrollLeft <= 4;
+      next.hidden = !scrollable || g.scrollLeft >= max - 4;
+      wrap.classList.toggle("at-end", g.scrollLeft >= max - 4);
+      if (dots) {
+        var pages = scrollable ? Math.ceil(g.scrollWidth / g.clientWidth) : 0;
+        var cur = scrollable ? Math.round(g.scrollLeft / max * (pages - 1)) : 0;
+        dots.innerHTML = pages > 1 ? Array.from({ length: pages }, function (_, i) { return "<span" + (i === cur ? " class='on'" : "") + "></span>"; }).join("") : "";
+      }
+    }
+    prev.onclick = function () { g.scrollBy({ left: -step(), behavior: "smooth" }); };
+    next.onclick = function () { g.scrollBy({ left: step(), behavior: "smooth" }); };
+    g.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    update();
   }
   window.__cartRender = render;
 

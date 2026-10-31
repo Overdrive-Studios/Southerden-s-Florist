@@ -332,3 +332,15 @@ summary::after{color:var(--leaf)}
 .xstrip .xcard{flex:0 0 130px;scroll-snap-align:start}
 .xstrip .xbody{font-size:.8rem}
 @media (max-width:1180px){.menu a{font-size:.9rem}}
+/* Extras carousel in the cart */
+.xscroll{position:relative}
+.xscroll .xgrid{scrollbar-width:none}
+.xscroll .xgrid::-webkit-scrollbar{display:none}
+.xscroll.can-scroll:not(.at-end)::after{content:"";position:absolute;top:0;right:0;bottom:6px;width:56px;background:linear-gradient(to right,rgba(255,255,255,0),#fff);pointer-events:none;border-radius:0 14px 14px 0}
+.xarrow{position:absolute;top:calc(50% - 40px);z-index:2;width:40px;height:40px;border-radius:50%;border:0;background:var(--leaf);color:#fff;font-size:1.7rem;line-height:1;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);display:grid;place-items:center;padding-bottom:3px}
+.xarrow:hover{background:var(--green)}
+.xarrow[hidden]{display:none}
+.xprev{left:-10px}.xnext{right:-10px}
+.xdots{display:flex;justify-content:center;gap:6px;margin-top:10px}
+.xdots span{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.xdots span.on{background:var(--leaf);width:18px;border-radius:4px}
