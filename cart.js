@@ -103,7 +103,7 @@
       "<div><label for='sn'>Your name</label><input id='sn' name='sender_name' required autocomplete='name'></div>" +
       "<div><label for='sp'>Your phone</label><input id='sp' name='sender_phone' type='tel' required autocomplete='tel'></div>" +
       "<div class='full'><label for='em'>Your email</label><input id='em' name='email' type='email' required autocomplete='email'></div>" +
-      "<div class='full'><label for='nt'>Anything else? (optional)</label><textarea id='nt' name='notes' rows='2' placeholder='Colour preferences, a bigger size, delivery instructions'></textarea></div>" +
+      "<div class='full'><label for='nt'>Anything else? (optional)</label><textarea id='nt' name='notes' rows='2' placeholder='Colour preferences, delivery instructions'></textarea></div>" +
       "</div></fieldset>" +
       "<button class='btn btn-primary' style='width:100%;justify-content:center' type='submit'>" + (S.paymentLink ? "Continue to payment" : "Place order") + " · " + money(total(c)) + "</button>" +
       "<p class='hint' style='text-align:center;margin-top:10px'>" + (S.paymentLink ? "You'll be taken to our secure payment page." : "We'll call you to confirm your order and take payment.") + " By placing your order you agree to our <a href='" + root + "terms.html'>Terms &amp; Conditions</a>.</p>" +
