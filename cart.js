@@ -106,7 +106,7 @@
       "<div class='full'><label for='nt'>Anything else? (optional)</label><textarea id='nt' name='notes' rows='2' placeholder='Colour preferences, a bigger size, delivery instructions'></textarea></div>" +
       "</div></fieldset>" +
       "<button class='btn btn-primary' style='width:100%;justify-content:center' type='submit'>" + (S.paymentLink ? "Continue to payment" : "Place order") + " · " + money(total(c)) + "</button>" +
-      "<p class='hint' style='text-align:center;margin-top:10px'>" + (S.paymentLink ? "You'll be taken to our secure payment page." : "We'll call you to confirm your order and take payment.") + "</p>" +
+      "<p class='hint' style='text-align:center;margin-top:10px'>" + (S.paymentLink ? "You'll be taken to our secure payment page." : "We'll call you to confirm your order and take payment.") + " By placing your order you agree to our <a href='" + root + "terms.html'>Terms &amp; Conditions</a>.</p>" +
       "</form></div><aside class='panel summary'><h3>Order summary</h3>" + lines +
       "<div class='totals'><div><span>Delivery in Toowoomba</span><span>Included</span></div><div class='grand'><span>Total incl. GST</span><span>" + money(total(c)) + "</span></div></div>" +
       "<p class='hint' style='margin-top:12px'>Delivering outside Toowoomba? We'll confirm any extra charge before your order goes out.</p></aside></div>";

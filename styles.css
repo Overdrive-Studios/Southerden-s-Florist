@@ -350,3 +350,5 @@ a.comm:hover{box-shadow:var(--shadow);transform:translateY(-3px)}
 .comm-logo{height:110px;display:flex;align-items:center;justify-content:center;margin:-6px 0 18px;padding:10px;border-bottom:1px solid var(--line)}
 .comm-logo img{max-height:90px;max-width:100%;width:auto;object-fit:contain}
 .comm .more{font-weight:600;color:var(--green-2);font-size:.9rem;margin-top:auto;padding-top:6px}
+.menu{gap:15px}.menu a{font-size:.9rem}.nav{gap:14px}
+html,body{overflow-x:hidden}
