@@ -1,0 +1,28 @@
+name: Copy photos from old site
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/fetch-photos.yml
+      - images/download-photos.py
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download photos
+        run: python3 images/download-photos.py
+      - name: Commit photos
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898729+github-actions[bot]@users.noreply.github.com"
+          git add images
+          git diff --cached --quiet && echo "No new photos" || (git commit -m "Add product photos from old site" && git push)
