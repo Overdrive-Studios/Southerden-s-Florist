@@ -96,7 +96,7 @@
       "<div><label for='rn'>Recipient's name</label><input id='rn' name='recipient_name' required></div>" +
       "<div class='full'><label for='ad'>Delivery address</label><input id='ad' name='address' required placeholder='Street address, unit, or hospital ward and room'></div>" +
       "<div><label for='sb'>Suburb / town</label><input id='sb' name='suburb' required></div>" +
-      "<div><label for='rp'>Recipient's phone (optional)</label><input id='rp' name='recipient_phone' type='tel' placeholder='Helps if no one is home'></div>" +
+      "<div><label for='rp'>Recipient's phone</label><input id='rp' name='recipient_phone' type='tel' required placeholder='So we can reach them for delivery'></div>" +
       "</div></fieldset>" +
       "<fieldset><legend>Card message</legend><textarea name='card_message' rows='3' maxlength='300' aria-label='Card message' placeholder='Happy birthday Mum, love from all of us'></textarea></fieldset>" +
       "<fieldset><legend>Your details</legend><div class='fields'>" +
