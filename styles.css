@@ -271,3 +271,38 @@ form.order input:focus,form.order textarea:focus{outline:none;border-color:var(-
 .story-photo img{height:auto}
 .menu{gap:20px}
 .menu a{white-space:nowrap}
+
+/* ===== Brand theme matched to the Southerden's logo ===== */
+:root{
+  --bg:#fbfaf4; --surface:#ffffff; --ink:#1b1d16; --muted:#5c6150; --line:#e6e2c8;
+  --leaf:#6e9b00; --green:#4a6b00; --green-2:#5c8500; --rose:#5c8500;
+  --blush:#d7d370; --olive:#c2bc66; --cream:#f5f3df;
+}
+h1,h2,h3,.logo b,.contact-card .big,.hero-badge b,.timeline b,.fact b,.bigprice,footer h4,.cat-intro b,.line h4{font-family:Oswald,"Arial Narrow",sans-serif;font-weight:600;letter-spacing:.005em}
+.hero h1{line-height:1.05}
+.hero h1 em{font-style:normal;color:var(--leaf);font-weight:600}
+.eyebrow{color:var(--green-2)}
+.announce{background:#141611;color:#e9e6c9}
+.announce strong{color:var(--blush)}
+.announce a{color:inherit}
+.btn-primary{background:var(--leaf)}
+.btn-primary:hover{background:var(--green)}
+.logo-img{height:46px;width:auto}
+.story{background:#1b1e12}
+.story .eyebrow,.contact-card .eyebrow{color:var(--blush)!important}
+.contact-card{background:#1b1e12;border-top:6px solid var(--leaf)}
+footer{background:#121410;border-top:6px solid var(--leaf)}
+.foot-logo{width:220px;height:auto;margin-bottom:14px}
+.cat{background:#1b1e12}
+.cat h3{color:#fff}.cat p{color:var(--blush)}
+.tab[aria-selected=true]{background:var(--leaf);border-color:var(--leaf)}
+.card .price,.product .bigprice,.fact b{color:var(--green)}
+.card .view,.card a.order,.comm a{color:var(--green-2)}
+.page-hero{background:linear-gradient(120deg,var(--cream),#eeeacb);border-bottom:4px solid var(--olive)}
+.trust-item svg,.notes svg,.contact-list svg{color:var(--leaf)}
+.cart-count{background:var(--leaf)}
+.toast{background:#1b1e12;border-left:5px solid var(--leaf)}
+.suburbs span{background:var(--cream)}
+summary::after{color:var(--leaf)}
+@media (max-width:640px){.logo-img{height:38px}}
+.logo-img{height:56px}@media (max-width:640px){.logo-img{height:42px}}
