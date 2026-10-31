@@ -306,3 +306,29 @@ footer{background:#121410;border-top:6px solid var(--leaf)}
 summary::after{color:var(--leaf)}
 @media (max-width:640px){.logo-img{height:38px}}
 .logo-img{height:56px}@media (max-width:640px){.logo-img{height:42px}}
+
+/* Add-on extras */
+.xgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.xcard{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.xcard .art{position:relative;aspect-ratio:1/1;display:block}
+.xbody{padding:10px 12px 4px;display:flex;flex-direction:column;gap:2px;font-size:.88rem;line-height:1.3}
+.xbody span{color:var(--green);font-weight:600}
+.xadd{margin:8px 12px 12px;border:1.5px solid var(--leaf);background:#fff;color:var(--green);border-radius:999px;padding:7px 10px;font:600 .85rem Inter,sans-serif;cursor:pointer}
+.xadd:hover{background:var(--leaf);color:#fff}
+[data-extras-strip]{margin-top:28px;border-top:1px solid var(--line);padding-top:22px}
+[data-extras-strip] h3,.xstrip h3{font-size:1.25rem}
+.xstrip{margin-bottom:26px}
+.checkout-main{min-width:0}
+.needflowers{grid-column:1/-1;border-left:5px solid var(--leaf)}
+.needflowers p{color:var(--muted);margin:6px 0 16px}
+.xpage-grid .card .body{gap:6px}
+.xpage-grid .card p{font-size:.88rem;color:var(--muted)}
+.xpage-grid button.btn{justify-content:center;width:100%;padding:10px 14px}
+.notice{background:var(--cream);border-left:5px solid var(--leaf);border-radius:12px;padding:16px 20px;margin-bottom:28px;font-weight:500}
+@media (max-width:640px){.xgrid{grid-template-columns:repeat(2,1fr)}}
+.logo{flex-shrink:0}
+.art{background:var(--cream)}
+.xstrip .xgrid{display:flex;overflow-x:auto;gap:10px;padding-bottom:6px;scroll-snap-type:x mandatory}
+.xstrip .xcard{flex:0 0 130px;scroll-snap-align:start}
+.xstrip .xbody{font-size:.8rem}
+@media (max-width:1180px){.menu a{font-size:.9rem}}
