@@ -254,3 +254,20 @@ form.order input:focus,form.order textarea:focus{outline:none;border-color:var(-
 .empty,.done{text-align:center;padding:70px 20px;max-width:560px;margin:0 auto}
 @media (max-width:1000px){.checkout{grid-template-columns:1fr}.summary{position:static;order:-1}}
 @media (max-width:640px){.fields{grid-template-columns:1fr}}
+
+/* Show every photo in full, never cropped */
+.art img,.hero-art img,.story-photo img,.product .photo img,.line .art img{object-fit:contain;background:#fff}
+.story-photo img{background:transparent}
+.hero-art{border-radius:var(--radius);background:#fff;aspect-ratio:1/1}
+.cat{aspect-ratio:auto!important;flex-direction:column;align-items:stretch;padding:0;background:var(--green);border:1px solid var(--line)}
+.cat::after{display:none}
+.cat .art{position:relative;inset:auto;aspect-ratio:1/1;width:100%;background:#fff}
+.cat:hover .art{transform:none}
+.cat div{padding:14px 18px 16px}
+.hero-art{aspect-ratio:auto}
+.hero-art img{position:static;height:auto}
+.hero-badge{left:16px;bottom:16px}
+.story-photo{aspect-ratio:auto}
+.story-photo img{height:auto}
+.menu{gap:20px}
+.menu a{white-space:nowrap}
