@@ -466,3 +466,9 @@ select.pick:focus{outline:3px solid rgba(110,155,0,.25);outline-offset:1px}
 .pick-label{white-space:nowrap}
 .xcard select.pick{font-size:.82rem;padding-right:34px;background-position:right 8px center}
 @media (min-width:1001px){.product [data-extras-strip] .xgrid{grid-template-columns:repeat(2,1fr)}}
+/* Extra product photos */
+.photo-col{min-width:0}
+.thumbs{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.thumb{width:72px;height:72px;border-radius:10px;overflow:hidden;border:2px solid var(--line);background:#fff;padding:0;cursor:pointer}
+.thumb img{width:100%;height:100%;object-fit:contain}
+.thumb.on{border-color:var(--leaf);box-shadow:0 0 0 3px rgba(110,155,0,.18)}

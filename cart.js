@@ -64,6 +64,27 @@
   if (prodOpts && prodOpts.options.length) showPrice();
   if (prodOpts && prodOpts.extras === false) document.querySelectorAll("[data-extras-strip]").forEach(function (el) { el.remove(); });
 
+  // ---- Extra product photos (data in product-photos.js) ----
+  var gal = prodData && (window.PRODUCT_PHOTOS || {})[prodData.id];
+  var mainPhoto = document.querySelector(".product .photo");
+  if (gal && gal.length && mainPhoto) {
+    var mainImg = mainPhoto.querySelector("img");
+    var all = [prodData.img].concat(gal);
+    var strip = document.createElement("div");
+    strip.className = "thumbs";
+    strip.innerHTML = all.map(function (f, i) {
+      return "<button type='button' class='thumb" + (i ? "" : " on") + "' data-photo='" + esc(f) + "' aria-label='Photo " + (i + 1) + "'><img src='" + root + "images/" + esc(f) + "' alt='' loading='lazy' onerror='this.parentNode.remove()'></button>";
+    }).join("");
+    mainPhoto.parentNode.insertBefore(strip, mainPhoto.nextSibling);
+    var wrap = document.createElement("div"); wrap.className = "photo-col";
+    mainPhoto.parentNode.insertBefore(wrap, mainPhoto); wrap.appendChild(mainPhoto); wrap.appendChild(strip);
+    strip.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-photo]"); if (!t || !mainImg) return;
+      mainImg.src = root + "images/" + t.dataset.photo;
+      strip.querySelectorAll(".thumb").forEach(function (b) { b.classList.toggle("on", b === t); });
+    });
+  }
+
   // ---- Clicks: quantity, add product, add extra ----
   document.addEventListener("click", function (e) {
     var q = e.target.closest("[data-qty]");

@@ -17,7 +17,7 @@ window.EXTRAS = [
       ["Lindt chocolates 235g", 30, "lindt_assorted_235g_000.jpg"],
       ["Cadbury Roses 220g", 20, "l_roses-chocs_20180610171710.jpg"],
       ["Cadbury Roses 380g", 30, "l_roses-chocs_20180610171710.jpg"],
-      ["Cadbury Milk Tray 360g", 35]
+      ["Cadbury Milk Tray 360g", 35, "milk-tray_000.jpg"]
     ] }
   },
   {
