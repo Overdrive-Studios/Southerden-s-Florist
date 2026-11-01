@@ -234,40 +234,173 @@
   }
 
   // ---- STEP 2: Delivery & details ----
+  var PLACES = [
+    ["home", "Home", "Unit or apartment number", false, "e.g. Unit 4"],
+    ["work", "Workplace", "Business name", true, "e.g. Toowoomba Dental"],
+    ["hospital", "Hospital or care home", "Hospital or home, ward and room", true, "e.g. St Vincent's, Ward 3, Room 12"],
+    ["funeral", "Funeral or church", "Funeral home or church, and service time", true, "e.g. Toowoomba Funerals, 11am service"]
+  ];
+  var CARD_IDEAS = ["Happy birthday!", "Thinking of you", "Congratulations!", "Get well soon", "With deepest sympathy", "Happy anniversary", "Thank you", "Love you"];
+  var ICON = {
+    who: "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='8' r='4'/><path d='M4 21c0-4 4-6 8-6s8 2 8 6'/></svg>",
+    where: "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z'/><circle cx='12' cy='10' r='2.5'/></svg>",
+    when: "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M3 10h18M8 3v4M16 3v4'/></svg>",
+    card: "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><rect x='3' y='5' width='18' height='14' rx='2'/><path d='M3 7l9 6 9-6'/></svg>",
+    you: "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.4 1.8.7 2.7a2 2 0 01-.5 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.7.7a2 2 0 011.7 2z'/></svg>",
+    search: "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><circle cx='11' cy='11' r='7'/><path d='M20 20l-3.5-3.5'/></svg>"
+  };
+  function sec(n, icon, title, sub, body) {
+    return "<section class='panel dsec'><div class='dsec-head'><span class='dnum'>" + ICON[icon] + "</span><div><small>Step " + n + " of 5</small><h3>" + title + "</h3>" + (sub ? "<p>" + sub + "</p>" : "") + "</div></div>" + body + "</section>";
+  }
+  function fld(id, name, label, attrs, cls) {
+    return "<div class='f " + (cls || "") + "'><label for='" + id + "'>" + label + "</label><input id='" + id + "' name='" + name + "' " + (attrs || "") + "><span class='ferr'></span></div>";
+  }
+
   function renderDetails(c) {
-    var e = earliest();
-    app.innerHTML = stepper(1) + "<div class='checkout'><div class='checkout-main'><form class='order' id='orderForm' novalidate>" +
-      "<div class='panel'><fieldset><legend>Delivery</legend><div class='fields'>" +
-      "<div><label for='dd'>Delivery date</label><input id='dd' type='date' name='delivery_date' required min='" + iso(e) + "' value='" + iso(e) + "'><div class='hint'>Same day if ordered by 2pm Mon–Fri. For Saturday, please call.</div></div>" +
-      "<div><label for='rn'>Recipient's name</label><input id='rn' name='recipient_name' required></div>" +
-      "<div class='full addr-wrap'><label for='ad'>Delivery address</label><input id='ad' name='address' required autocomplete='off' placeholder='Start typing the street address'><div class='addr-sugg' id='addrSugg' role='listbox' hidden></div><div class='hint'>Pick the address from the list if it appears. Add a unit, ward or room number in the notes below.</div></div>" +
-      "<div><label for='sb'>Suburb / town</label><input id='sb' name='suburb' required list='suburbList' autocomplete='off'><datalist id='suburbList'>" + allSuburbs.map(function (x) { return "<option value='" + esc(x) + "'>"; }).join("") + "</datalist></div>" +
-      "<div><label for='pc'>Postcode</label><input id='pc' name='postcode' required inputmode='numeric' pattern='[0-9]{4}' maxlength='4' placeholder='4350'></div>" +
-      "<div class='full' id='delivInfo' aria-live='polite'></div>" +
-      "<div><label for='rp'>Recipient's phone</label><input id='rp' name='recipient_phone' type='tel' required placeholder='So we can reach them for delivery'></div>" +
-      "</div></fieldset></div>" +
-      "<div class='panel'><fieldset><legend>Card message</legend><textarea name='card_message' rows='3' maxlength='300' aria-label='Card message' placeholder='Happy birthday Mum, love from all of us'></textarea></fieldset></div>" +
-      "<div class='panel'><fieldset><legend>Your details</legend><div class='fields'>" +
-      "<div><label for='sn'>Your name</label><input id='sn' name='sender_name' required autocomplete='name'></div>" +
-      "<div><label for='sp'>Your phone</label><input id='sp' name='sender_phone' type='tel' required autocomplete='tel'></div>" +
-      "<div class='full'><label for='em'>Your email</label><input id='em' name='email' type='email' required autocomplete='email'></div>" +
-      "<div class='full'><label for='nt'>Anything else? (optional)</label><textarea id='nt' name='notes' rows='2' placeholder='Colour preferences, delivery instructions'></textarea></div>" +
-      "</div></fieldset></div>" +
-      "<div class='step-nav'><a href='#cart' class='btn btn-ghost'>← Back to cart</a><button class='btn btn-primary' type='submit' id='toPayment'>Continue to payment →</button></div>" +
+    var place = draft.delivery_type || "home";
+    app.innerHTML = stepper(1) + "<div class='checkout details-step'><div class='checkout-main'><form class='order dform' id='orderForm' novalidate>" +
+      sec(1, "who", "Who are the flowers for?", "We'll only contact them if our driver needs help finding them.",
+        "<div class='fields'>" + fld("rn", "recipient_name", "Recipient's full name", "required autocomplete='off' placeholder='e.g. Jane Citizen'") +
+        fld("rp", "recipient_phone", "Recipient's phone", "type='tel' required inputmode='tel' placeholder='e.g. 0400 123 456'") + "</div>") +
+      sec(2, "where", "Where are we delivering?", "",
+        "<div class='chips place-chips' role='radiogroup' aria-label='Type of place'>" + PLACES.map(function (pl) {
+          return "<label class='chip'><input type='radio' name='delivery_type' value='" + pl[0] + "'" + (pl[0] === place ? " checked" : "") + "><span>" + pl[1] + "</span></label>";
+        }).join("") + "</div>" +
+        "<div class='fields'>" +
+        "<div class='f full addr-wrap'><label for='ad'>Street address</label><div class='search-in'>" + ICON.search + "<input id='ad' name='address' required autocomplete='off' placeholder='Start typing, e.g. 12 Ruthven Street'></div><div class='addr-sugg' id='addrSugg' role='listbox' hidden></div><span class='ferr'></span></div>" +
+        "<div class='f full' id='placeField'><label for='pd'></label><input id='pd' name='place_detail' autocomplete='off'><span class='ferr'></span></div>" +
+        "<div class='f'><label for='sb'>Suburb or town</label><input id='sb' name='suburb' required list='suburbList' autocomplete='off' placeholder='e.g. Toowoomba'><datalist id='suburbList'>" + allSuburbs.map(function (x) { return "<option value='" + esc(x) + "'>"; }).join("") + "</datalist><span class='ferr'></span></div>" +
+        fld("pc", "postcode", "Postcode", "required inputmode='numeric' pattern='[0-9]{4}' maxlength='4' placeholder='e.g. 4350'") +
+        "</div><div id='delivInfo' aria-live='polite'></div>") +
+      sec(3, "when", "When should it arrive?", "Monday to Friday. For Saturday delivery, please call us on " + esc(S.phone) + ".",
+        "<div class='chips date-chips' id='dateChips' role='radiogroup' aria-label='Delivery date'></div>" +
+        "<div class='f other-date' id='otherDate' hidden><label for='ddPick'>Choose a date</label><input type='date' id='ddPick'></div>" +
+        "<input type='hidden' id='dd' name='delivery_date'><span class='ferr' id='ddErr'></span>") +
+      sec(4, "card", "Card message", "Optional. We'll handwrite it on a card with the flowers.",
+        "<div class='chips idea-chips'>" + CARD_IDEAS.map(function (t) { return "<button type='button' class='chip-btn' data-idea='" + esc(t) + "'>" + esc(t) + "</button>"; }).join("") + "</div>" +
+        "<div class='f full'><label for='cm'>Message</label><textarea id='cm' name='card_message' rows='3' maxlength='250' placeholder='Write your message, or tap an idea above'></textarea><span class='count' id='cmCount'>0 / 250</span></div>" +
+        "<div class='fields'><div class='f'><label for='cf'>From</label><input id='cf' name='card_from' autocomplete='off' placeholder='e.g. Love, Sam and the kids'></div>" +
+        "<label class='anon-tick'><input type='checkbox' id='anon' name='card_anonymous' value='yes'><span>Send anonymously<small>No name on the card</small></span></label></div>") +
+      sec(5, "you", "Your details", "So we can confirm your order and contact you if needed.",
+        "<div class='fields'>" + fld("sn", "sender_name", "Your name", "required autocomplete='name'") +
+        fld("sp", "sender_phone", "Your phone", "type='tel' required autocomplete='tel' inputmode='tel'") +
+        fld("em", "email", "Your email", "type='email' required autocomplete='email'", "full") +
+        "<div class='f full'><label for='nt'>Anything else we should know? <em>(optional)</em></label><textarea id='nt' name='notes' rows='2' placeholder='Colour preferences, gate code, best time to deliver'></textarea></div></div>") +
+      "<div class='step-nav sticky-nav'><a href='#cart' class='btn btn-ghost'>← Cart</a><button class='btn btn-primary' type='submit' id='toPayment'>Continue to payment <span id='navTotal'></span></button></div>" +
       "</form></div>" + summary(c, { step: "details" }) + "</div>";
+
     var form = document.getElementById("orderForm");
-    Object.keys(draft).forEach(function (k) { if (k[0] !== "_" && form.elements[k] && draft[k]) form.elements[k].value = draft[k]; });
-    form.addEventListener("input", function (ev) { if (ev.target.name) { draft[ev.target.name] = ev.target.value; saveDraft(); } });
+    Object.keys(draft).forEach(function (k) {
+      var el = form.elements[k]; if (k[0] === "_" || !el || !draft[k]) return;
+      if (el.type === "checkbox") el.checked = true; else if (!(el instanceof RadioNodeList) && el.type !== "radio") el.value = draft[k];
+    });
+    function setPlace() {
+      var v = (form.querySelector("[name=delivery_type]:checked") || {}).value || "home", pl = PLACES.find(function (x) { return x[0] === v; });
+      var pf = document.getElementById("placeField"), pd = document.getElementById("pd");
+      pf.querySelector("label").innerHTML = esc(pl[2]) + (pl[3] ? "" : " <em>(optional)</em>");
+      pd.placeholder = pl[4]; pd.required = pl[3];
+      draft.delivery_type = v; saveDraft();
+    }
+    setPlace();
+    form.addEventListener("change", function (e) { if (e.target.name === "delivery_type") setPlace(); });
+    form.addEventListener("input", function (ev) {
+      var t = ev.target; if (!t.name) return;
+      draft[t.name] = t.type === "checkbox" ? (t.checked ? "yes" : "") : t.value; saveDraft();
+      var w = t.closest(".f"); if (w && w.classList.contains("err") && t.value.trim()) { w.classList.remove("err"); }
+      if (t.id === "cm") countCard();
+      if (t.id === "anon") document.getElementById("cf").disabled = t.checked;
+    });
+    document.getElementById("anon").addEventListener("change", function (e) { document.getElementById("cf").disabled = e.target.checked; draft.card_anonymous = e.target.checked ? "yes" : ""; saveDraft(); });
+    document.getElementById("cf").disabled = !!draft.card_anonymous;
+    function countCard() { document.getElementById("cmCount").textContent = document.getElementById("cm").value.length + " / 250"; }
+    countCard();
+    form.querySelector(".idea-chips").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-idea]"); if (!b) return;
+      var cm = document.getElementById("cm");
+      cm.value = cm.value.trim() ? cm.value.trim() + " " + b.dataset.idea : b.dataset.idea;
+      draft.card_message = cm.value; saveDraft(); countCard(); cm.focus();
+    });
     form.addEventListener("submit", function (ev) {
       ev.preventDefault();
-      if (!form.reportValidity()) return;
+      if (!validate(form)) return;
       var b = document.getElementById("toPayment"); b.disabled = true; b.textContent = "Checking address…";
       new FormData(form).forEach(function (v, k) { draft[k] = v; });
+      draft.card_anonymous = document.getElementById("anon").checked ? "yes" : "";
       Promise.resolve(lookUp()).then(function () { saveDraft(); go("payment"); });
     });
+    setupMobileSummary();
     setupAddress();
     updateDelivery();
     if (!loc) lookUp();
+  }
+
+  // Friendly inline errors instead of the browser's pop-ups
+  var MSG = { recipient_name: "Please enter who the flowers are for.", recipient_phone: "Please enter a phone number for the recipient.",
+    address: "Please enter the street address.", place_detail: "Please fill this in so our driver can find them.", suburb: "Please enter the suburb or town.",
+    postcode: "Please enter a 4-digit postcode.", sender_name: "Please enter your name.", sender_phone: "Please enter your phone number.", email: "Please enter a valid email address." };
+  function validate(form) {
+    var first = null;
+    form.querySelectorAll(".f").forEach(function (w) { w.classList.remove("err"); });
+    form.querySelectorAll("input[required], textarea[required]").forEach(function (el) {
+      if (el.checkValidity() && el.value.trim()) return;
+      var w = el.closest(".f"); if (!w) return;
+      w.classList.add("err"); var m = w.querySelector(".ferr"); if (m) m.textContent = MSG[el.name] || "Please fill this in.";
+      if (!first) first = el;
+    });
+    var dd = document.getElementById("dd"), de = document.getElementById("ddErr");
+    if (!dd.value) { de.textContent = "Please choose a delivery date."; de.style.display = "block"; if (!first) first = document.getElementById("dateChips"); } else { de.style.display = "none"; }
+    if (first) { first.scrollIntoView({ behavior: "smooth", block: "center" }); if (first.focus) setTimeout(function () { first.focus({ preventScroll: true }); }, 300); return false; }
+    return true;
+  }
+
+  // Delivery dates as tap-to-pick buttons
+  var lastDateKey = "";
+  function buildDates(d) {
+    var base = earliest(d && d.cutoffHour), min = (d && d.sameDay === false) ? nextBusinessDay(base) : base;
+    var key = iso(min); var box = document.getElementById("dateChips"); if (!box) return;
+    var dd = document.getElementById("dd"), pick = document.getElementById("ddPick"), other = document.getElementById("otherDate");
+    pick.min = key;
+    if (!dd.value && draft.delivery_date) dd.value = draft.delivery_date;
+    if (dd.value && dd.value < key) dd.value = "";
+    if (key === lastDateKey && box.childElementCount) return markDate();
+    lastDateKey = key;
+    var today = iso(brisNow()), tmr = iso(new Date(brisNow().getTime() + 864e5));
+    var days = [], cur = new Date(min);
+    while (days.length < 5) { if (cur.getDay() !== 0 && cur.getDay() !== 6) days.push(new Date(cur)); cur.setDate(cur.getDate() + 1); }
+    box.innerHTML = days.map(function (x) {
+      var v = iso(x), tag = v === today ? "Today" : v === tmr ? "Tomorrow" : x.toLocaleDateString("en-AU", { weekday: "short" });
+      return "<button type='button' class='date-chip' data-date='" + v + "'><small>" + tag + "</small><b>" + x.getDate() + "</b><span>" + x.toLocaleDateString("en-AU", { month: "short" }) + "</span></button>";
+    }).join("") + "<button type='button' class='date-chip other' data-date='other'><small>Later</small><b>" + ICON.when + "</b><span>Pick a date</span></button>";
+    box.onclick = function (e) {
+      var b = e.target.closest("[data-date]"); if (!b) return;
+      if (b.dataset.date === "other") { other.hidden = false; pick.focus(); if (pick.showPicker) try { pick.showPicker(); } catch (er) {} return; }
+      other.hidden = true; setDate(b.dataset.date);
+    };
+    pick.onchange = function () {
+      var v = pick.value; if (!v) return;
+      var p = v.split("-"), wd = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
+      if (wd === 0 || wd === 6) { pick.value = ""; document.getElementById("ddErr").textContent = "We deliver Monday to Friday. For Saturday, please call us."; document.getElementById("ddErr").style.display = "block"; return; }
+      setDate(v);
+    };
+    if (!dd.value) setDate(iso(min)); else markDate();
+  }
+  function setDate(v) { var dd = document.getElementById("dd"); dd.value = v; draft.delivery_date = v; saveDraft(); document.getElementById("ddErr").style.display = "none"; markDate(); }
+  function markDate() {
+    var v = document.getElementById("dd").value, found = false;
+    document.querySelectorAll(".date-chip").forEach(function (b) { var on = b.dataset.date === v; b.classList.toggle("on", on); if (on) found = true; });
+    var other = document.querySelector(".date-chip.other"), od = document.getElementById("otherDate");
+    if (other) other.classList.toggle("on", !!v && !found);
+    if (v && !found) { od.hidden = false; document.getElementById("ddPick").value = v; }
+    var lbl = document.getElementById("dateChosen");
+  }
+
+  // Phones: summary collapses to a tap-to-open bar
+  function setupMobileSummary() {
+    var aside = app.querySelector(".summary"); if (!aside || aside.querySelector(".sum-toggle")) return;
+    var t = document.createElement("button"); t.type = "button"; t.className = "sum-toggle";
+    t.innerHTML = "<span>Order summary <em>▾</em></span><b id='sumTotal'></b>";
+    aside.insertBefore(t, aside.firstChild);
+    t.onclick = function () { aside.classList.toggle("open"); };
   }
 
   function fields() {
@@ -345,22 +478,25 @@
     var info = document.getElementById("delivInfo"); if (!info) return null;
     var c = load(), sub = total(c), f = fields();
     var d = (f.street || f.suburb) ? DV.match(loc, f.suburb) : null;
-    var label = document.getElementById("delivLabel"), fee = document.getElementById("delivFee"), dateEl = document.getElementById("dd");
+    var label = document.getElementById("delivLabel"), fee = document.getElementById("delivFee");
     if (checking === true || (locating && !loc)) {
-      info.innerHTML = "<div class='deliv deliv-checking'><b>Checking the delivery address…</b></div>";
+      info.innerHTML = "<div class='dcard checking'><span class='spin'></span><div><b>Checking the delivery address…</b></div></div>";
       label.textContent = "Delivery"; fee.textContent = "Checking…"; d = null;
-    } else if (!d || !f.suburb) { info.innerHTML = ""; label.textContent = "Delivery"; fee.textContent = "Enter address"; d = null; }
-    else {
-      var cls = d.unknown ? "unknown" : d.fee > 0 ? d.type : "free";
-      info.innerHTML = "<div class='deliv deliv-" + cls + "'><b>" + esc(d.name) + (d.unknown ? "" : (d.fee > 0 ? " · " + money(d.fee) : " · Delivery included")) + "</b><span>" + esc(d.note || "") + "</span></div>";
-      label.textContent = d.unknown ? "Delivery" : d.name;
+    } else if (!d || !f.suburb) {
+      info.innerHTML = "<div class='dcard empty'>" + ICON.where + "<div><b>Delivery fee</b><span>Enter the address to see the delivery cost. It's included anywhere in Toowoomba.</span></div></div>";
+      label.textContent = "Delivery"; fee.textContent = "Enter address"; d = null;
+    } else {
+      var cls = d.unknown ? "unknown" : d.fee > 0 ? "extra" : "free";
+      var price = d.unknown ? "To be confirmed" : d.fee > 0 ? money(d.fee) : "Included";
+      info.innerHTML = "<div class='dcard " + cls + "'>" + ICON.where + "<div><b>" + esc(d.unknown ? "Outside our usual delivery area" : "Delivering to " + (f.suburb || "")) + "</b><span>" + esc(d.note || "") + "</span></div><strong>" + price + "</strong></div>";
+      label.textContent = d.unknown ? "Delivery" : d.fee > 0 ? "Delivery" : "Delivery (Toowoomba)";
       fee.textContent = d.unknown ? "To be confirmed" : d.fee > 0 ? money(d.fee) : "Included";
     }
-    var base = earliest(d && d.cutoffHour);                                // zones with an earlier cut-off
-    var min = (d && d.sameDay === false) ? nextBusinessDay(base) : base;   // courier zones can't be same-day
-    dateEl.min = iso(min);
-    if (dateEl.value && dateEl.value < dateEl.min) { dateEl.value = dateEl.min; draft.delivery_date = dateEl.value; saveDraft(); }
-    document.getElementById("grandTotal").textContent = money(sub + (d && !d.unknown ? d.fee : 0)) + (d && d.unknown ? " + delivery" : "");
+    buildDates(d);
+    var grand = money(sub + (d && !d.unknown ? d.fee : 0)) + (d && d.unknown ? " + delivery" : "");
+    document.getElementById("grandTotal").textContent = grand;
+    var st = document.getElementById("sumTotal"); if (st) st.textContent = grand;
+    var nt = document.getElementById("navTotal"); if (nt) nt.textContent = "· " + grand;
     return d;
   }
 
@@ -372,9 +508,9 @@
     var rev = function (title, body) { return "<div class='rev'><div class='rev-head'><h4>" + title + "</h4><a href='#details'>Edit</a></div>" + body + "</div>"; };
     app.innerHTML = stepper(2) + "<div class='checkout'><div class='checkout-main'><form class='order' id='payForm'>" +
       "<div class='panel'><h3>Check your order</h3>" +
-      rev("Delivering to", "<p><b>" + esc(draft.recipient_name) + "</b><br>" + esc(draft.address) + "<br>" + esc(draft.suburb) + " QLD " + esc(draft.postcode) + "<br>" + esc(draft.recipient_phone) + "</p>") +
+      rev("Delivering to", "<p><b>" + esc(draft.recipient_name) + "</b><br>" + (draft.place_detail ? esc(draft.place_detail) + "<br>" : "") + esc(draft.address) + "<br>" + esc(draft.suburb) + " QLD " + esc(draft.postcode) + "<br>" + esc(draft.recipient_phone) + "</p>") +
       rev("Delivery", "<p>" + esc(nice(draft.delivery_date)) + "<br>" + esc(d.name) + " · " + (d.unknown ? "cost to be confirmed" : d.fee > 0 ? money(d.fee) : "Delivery included") + "</p>") +
-      rev("Card message", "<p>" + (draft.card_message ? esc(draft.card_message).replace(/\n/g, "<br>") : "<span class='muted'>No card message</span>") + "</p>") +
+      rev("Card message", "<p>" + (draft.card_message ? esc(draft.card_message).replace(/\n/g, "<br>") : "<span class='muted'>No card message</span>") + (draft.card_message ? "<br><span class='muted'>" + (draft.card_anonymous ? "Sent anonymously" : draft.card_from ? "From: " + esc(draft.card_from) : "") + "</span>" : "") + "</p>") +
       rev("Your details", "<p>" + esc(draft.sender_name) + "<br>" + esc(draft.sender_phone) + "<br>" + esc(draft.email) + (draft.notes ? "<br><span class='muted'>Note: " + esc(draft.notes) + "</span>" : "") + "</p>") +
       "</div>" +
       "<div class='panel'><h3>Payment</h3><div class='paylist'>" + methods.map(function (m) {
@@ -404,8 +540,8 @@
       placed: now.toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) + ", " + now.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }),
       items: c.map(function (i) { return { name: i.name, opts: i.opts || "", qty: i.qty, price: i.price, extra: !!i.extra, img: i.img }; }),
       delivery: { date: draft.delivery_date, zone: d.name, unknown: !!d.unknown, fee: fee, how: d.how },
-      recipient: { name: draft.recipient_name, address: draft.address, suburb: draft.suburb, postcode: draft.postcode, phone: draft.recipient_phone },
-      card: draft.card_message || "",
+      recipient: { name: draft.recipient_name, place: draft.delivery_type || "home", detail: draft.place_detail || "", address: draft.address, suburb: draft.suburb, postcode: draft.postcode, phone: draft.recipient_phone },
+      card: draft.card_message || "", cardFrom: draft.card_anonymous ? "(anonymous)" : (draft.card_from || ""),
       sender: { name: draft.sender_name, phone: draft.sender_phone, email: draft.email },
       notes: draft.notes || "",
       payment: method,
@@ -419,9 +555,11 @@
       payment: method === "card" ? "Paying online by card (check payment received)" : "PAY BY PHONE: call the customer to take payment",
       delivery_date: nice(order.delivery.date),
       recipient_name: order.recipient.name,
+      delivery_to: ({ home: "Home", work: "Workplace", hospital: "Hospital or care home", funeral: "Funeral or church" })[order.recipient.place] + (order.recipient.detail ? ": " + order.recipient.detail : ""),
       address: order.recipient.address + ", " + order.recipient.suburb + " QLD " + order.recipient.postcode,
       recipient_phone: order.recipient.phone,
       card_message: order.card || "(none)",
+      card_from: order.card ? (order.cardFrom || "(not signed)") : "",
       items: order.items.filter(function (i) { return !i.extra; }).map(function (i) { return i.qty + " x " + itemLabel(i) + " (" + money(i.price * i.qty) + ")"; }).join("\n"),
       extras: order.items.filter(function (i) { return i.extra; }).map(function (i) { return i.qty + " x " + itemLabel(i) + " (" + money(i.price * i.qty) + ")"; }).join("\n") || "(none)",
       delivery: d.unknown ? "TO BE CONFIRMED: not in a listed delivery area" : d.name + " (" + (fee > 0 ? money(fee) : "delivery included") + ")",
@@ -477,8 +615,8 @@
       "<div class='panel'><h3>What happens next</h3><ol class='nextsteps'>" + next + "</ol>" +
       (o.payment === "card" && S.paymentLink ? "<a class='btn btn-primary' href='" + esc(S.paymentLink) + "' target='_blank' rel='noopener'>Complete payment · " + money(o.total) + "</a>" : "") + "</div>" +
       "<div class='confirm-grid'>" +
-      "<div class='panel'><h3>Delivery</h3><p><b>" + esc(o.recipient.name) + "</b><br>" + esc(o.recipient.address) + "<br>" + esc(o.recipient.suburb) + " QLD " + esc(o.recipient.postcode) + "<br>" + esc(o.recipient.phone) + "</p><p>" + esc(nice(o.delivery.date)) + "<br>" + esc(o.delivery.zone) + "</p>" +
-      "<h4 style='margin-top:14px'>Card message</h4><p>" + (o.card ? esc(o.card).replace(/\n/g, "<br>") : "<span class='muted'>No card message</span>") + "</p></div>" +
+      "<div class='panel'><h3>Delivery</h3><p><b>" + esc(o.recipient.name) + "</b><br>" + (o.recipient.detail ? esc(o.recipient.detail) + "<br>" : "") + esc(o.recipient.address) + "<br>" + esc(o.recipient.suburb) + " QLD " + esc(o.recipient.postcode) + "<br>" + esc(o.recipient.phone) + "</p><p>" + esc(nice(o.delivery.date)) + "<br>" + esc(o.delivery.zone) + "</p>" +
+      "<h4 style='margin-top:14px'>Card message</h4><p>" + (o.card ? esc(o.card).replace(/\n/g, "<br>") + (o.cardFrom ? "<br><span class='muted'>" + (o.cardFrom === "(anonymous)" ? "Sent anonymously" : "From: " + esc(o.cardFrom)) + "</span>" : "") : "<span class='muted'>No card message</span>") + "</p></div>" +
       "<div class='panel'><h3>Order details</h3><table class='otable'>" + flowers.map(row).join("") + (extras.length ? "<tr class='sub'><td colspan='2'>Extras</td></tr>" + extras.map(row).join("") : "") +
       "<tr class='tot'><td>Subtotal</td><td>" + money(o.subtotal) + "</td></tr>" +
       "<tr><td>" + (o.delivery.unknown ? "Delivery" : esc(o.delivery.zone)) + "</td><td>" + (o.delivery.unknown ? "To be confirmed" : o.delivery.fee > 0 ? money(o.delivery.fee) : "Included") + "</td></tr>" +
