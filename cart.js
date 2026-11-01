@@ -39,7 +39,7 @@
     var box = document.createElement("div");
     box.className = "popts";
     box.innerHTML = prodOpts.options.map(function (g, gi) {
-      return "<label><span>" + esc(g.label) + "</span><select data-popt='" + gi + "'>" + g.choices.map(function (ch, ci) {
+      return "<label><span class='pick-label'>" + esc(g.label) + " <em>" + g.choices.length + " options</em></span><select data-popt='" + gi + "' class='pick'>" + g.choices.map(function (ch, ci) {
         return "<option value='" + ci + "'>" + esc(ch[0]) + (ch[1] ? " (+" + money(ch[1]).replace(".00", "") + ")" : "") + "</option>";
       }).join("") + "</select></label>";
     }).join("");
@@ -93,11 +93,12 @@
     var first = x.pick.choices[0];
     return "<div class='xcard'><span class='art'><img src='" + root + "images/" + esc(first[2] || x.img) + "' alt='' loading='lazy' onerror='this.remove()'></span>" +
       "<div class='xbody'><b>" + esc(x.name) + "</b><span class='xprice'>" + money(first[1]) + "</span>" +
-      "<select data-xpick aria-label='" + esc(x.pick.label) + "'>" + x.pick.choices.map(function (ch, i) {
+      "<span class='pick-label'>Choose " + esc(x.pick.label.toLowerCase()) + " <em>" + x.pick.choices.length + " options</em></span>" +
+      "<select data-xpick class='pick' aria-label='" + esc(x.pick.label) + "'>" + x.pick.choices.map(function (ch, i) {
         var same = x.pick.choices.every(function (c) { return c[1] === first[1]; });
         return "<option value='" + i + "'>" + esc(ch[0]) + (same ? "" : " · " + money(ch[1]).replace(".00", "")) + "</option>";
       }).join("") + "</select>" +
-      (x.pick2 ? "<select data-xpick2 aria-label='" + esc(x.pick2.label) + "'>" + x.pick2.choices.map(function (c, i) { return "<option value='" + i + "'>" + esc(c) + "</option>"; }).join("") + "</select>" : "") +
+      (x.pick2 ? "<span class='pick-label'>Choose " + esc(x.pick2.label.toLowerCase()) + " <em>" + x.pick2.choices.length + " options</em></span><select data-xpick2 class='pick' aria-label='" + esc(x.pick2.label) + "'>" + x.pick2.choices.map(function (c, i) { return "<option value='" + i + "'>" + esc(c) + "</option>"; }).join("") + "</select>" : "") +
       "</div><button type='button' class='xadd' data-extra-id='" + esc(x.id) + "'>" + (inCart ? "Add another" : "+ Add") + "</button></div>";
   }
   document.addEventListener("change", function (e) {

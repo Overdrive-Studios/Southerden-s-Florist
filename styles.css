@@ -453,3 +453,16 @@ form.order label.agree{display:flex;gap:10px;align-items:center;margin:0;font-si
 .xpage-grid .xcard .xbody b{font-family:Oswald,sans-serif;font-size:1.2rem}
 .xpage-grid .xadd{margin:10px 16px 16px;padding:10px}
 .lopts{display:block;color:var(--muted);font-size:.82rem}
+/* Make every dropdown obviously a dropdown */
+select.pick{appearance:none;-webkit-appearance:none;width:100%;padding:10px 40px 10px 12px;border:2px solid var(--leaf)!important;border-radius:10px;background:#f6faea url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%234a6b00' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;font:inherit;font-weight:600;color:var(--ink);cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+select.pick:hover{background-color:#eef5dc}
+select.pick:focus{outline:3px solid rgba(110,155,0,.25);outline-offset:1px}
+.pick-label{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.78rem;font-weight:600;color:var(--ink);margin:8px 0 4px}
+.pick-label em{font-style:normal;font-weight:600;font-size:.72rem;color:#fff;background:var(--leaf);border-radius:999px;padding:1px 8px;white-space:nowrap}
+.xcard select.pick{margin-top:0;font-size:.85rem}
+.popts label .pick-label{font-size:.85rem;margin:0}
+.product [data-extras-strip] .xgrid{grid-template-columns:repeat(2,1fr)}
+.xstrip .xcard{flex:0 0 220px}
+.pick-label{white-space:nowrap}
+.xcard select.pick{font-size:.82rem;padding-right:34px;background-position:right 8px center}
+@media (min-width:1001px){.product [data-extras-strip] .xgrid{grid-template-columns:repeat(2,1fr)}}
