@@ -3,20 +3,15 @@
 //
 // HOW AN ADDRESS IS MATCHED
 // 1. The customer's street address is looked up on the map to get its exact location.
-// 2. Zones are checked top to bottom. A zone matches if the location is inside one of its
-//    drawn "areas", or within "maxKm" of Highfields (straight-line distance).
-// 3. If the address can't be found on the map, the suburb name is checked against "suburbs".
+// 2. If that location is inside a drawn "area" of a zone, that zone's fee applies
+//    (zones are checked top to bottom, so put the more specific ones first).
+// 3. Otherwise the suburb name is checked against each zone's "suburbs" list.
+//    Everything in Toowoomba is in the free zone this way.
 // 4. If nothing matches, the order still goes through, flagged "delivery cost to be confirmed".
 //
 // type: "free" = no charge, "extra" = our own driver with a fee, "courier" = handed to a courier.
 // sameDay: false = earliest delivery date is the next business day.
 // areas: list of shapes, each a list of [latitude, longitude] corner points.
-
-window.DELIVERY_SHOP = {
-  name: "Highfields",
-  lat: -27.4494276,
-  lng: 151.9453192
-};
 
 window.DELIVERY_ZONES = [
   {
@@ -26,9 +21,8 @@ window.DELIVERY_ZONES = [
     fee: 0,
     sameDay: true,
     note: "Same-day delivery when ordered by 2pm Monday to Friday.",
-    maxKm: 0,          // e.g. 20 -> anywhere within 20 km of Highfields
     areas: [],
-    // Used only when an address can't be found on the map.
+    // Any address in these suburbs is free, unless it falls inside a drawn fee area.
     suburbs: [
       "Toowoomba", "Toowoomba City", "East Toowoomba", "North Toowoomba", "South Toowoomba",
       "Highfields", "Middle Ridge", "Rangeville", "Centenary Heights",
@@ -44,7 +38,6 @@ window.DELIVERY_ZONES = [
     fee: 0,            // e.g. 15  ->  $15.00 added to the order
     sameDay: true,
     note: "Delivered by our own driver. Same-day when ordered by 2pm Monday to Friday.",
-    maxKm: 0,
     areas: [],
     suburbs: []
   },
@@ -55,7 +48,6 @@ window.DELIVERY_ZONES = [
     fee: 0,            // e.g. 30
     sameDay: false,
     note: "Handed to a courier partner. Usually delivered the next business day.",
-    maxKm: 0,
     areas: [],
     suburbs: []
   }

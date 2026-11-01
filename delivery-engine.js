@@ -1,18 +1,10 @@
 // Delivery engine: address lookup + zone matching. Settings live in delivery-zones.js.
 (function () {
-  var SHOP = window.DELIVERY_SHOP || { lat: -27.4494276, lng: 151.9453192 };
+  var CENTRE = { lat: -27.5606, lng: 151.9539 };   // Toowoomba, only used to rank address suggestions
   var ZONES = window.DELIVERY_ZONES || [];
   var UNKNOWN = window.DELIVERY_UNKNOWN || { name: "Outside our listed areas", note: "We'll call you to confirm delivery options and any cost." };
 
   function norm(t) { return String(t || "").toLowerCase().replace(/\bmt\b\.?/g, "mount").replace(/[^a-z0-9]+/g, " ").trim(); }
-
-  // Straight-line distance in km
-  function km(a, b) {
-    var R = 6371, r = Math.PI / 180;
-    var dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
-    var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    return 2 * R * Math.asin(Math.sqrt(h));
-  }
 
   // Is point inside a shape given as [[lat,lng], ...]
   function inside(pt, poly) {
@@ -24,35 +16,31 @@
     return hit;
   }
 
-  function result(z, how, dist) {
-    return { id: z.id, type: z.type, name: z.name, note: z.note, fee: +z.fee || 0, sameDay: z.sameDay !== false, how: how, km: dist };
+  function result(z, how) {
+    return { id: z.id, type: z.type, name: z.name, note: z.note, fee: +z.fee || 0, sameDay: z.sameDay !== false, how: how };
   }
 
   // loc = {lat, lng} or null; suburb = text
   function match(loc, suburb) {
-    var dist = loc ? km(SHOP, loc) : null;
+    // 1. Inside a drawn area
     if (loc) {
       for (var i = 0; i < ZONES.length; i++) {
         var z = ZONES[i];
-        if ((z.areas || []).some(function (a) { return a.length > 2 && inside(loc, a); })) return result(z, "address", dist);
-        if (+z.maxKm > 0 && dist <= +z.maxKm) return result(z, "address", dist);
+        if ((z.areas || []).some(function (a) { return a.length > 2 && inside(loc, a); })) return result(z, "area");
       }
     }
+    // 2. Suburb name
     var s = norm(suburb);
     if (s) {
-      var hasShapes = ZONES.some(function (z) { return (z.areas || []).length || +z.maxKm > 0; });
-      // Only fall back to suburb names when the map couldn't place the address, or no map areas are set up yet
-      if (!loc || !hasShapes) {
-        var z2 = ZONES.find(function (z) { return (z.suburbs || []).some(function (x) { return norm(x) === s; }); });
-        if (z2) return result(z2, "suburb", dist);
-      }
+      var z2 = ZONES.find(function (z) { return (z.suburbs || []).some(function (x) { return norm(x) === s; }); });
+      if (z2) return result(z2, "suburb");
     }
     if (!loc && !s) return null;
-    return { unknown: true, name: UNKNOWN.name, note: UNKNOWN.note, fee: 0, sameDay: true, how: loc ? "address" : "suburb", km: dist };
+    return { unknown: true, name: UNKNOWN.name, note: UNKNOWN.note, fee: 0, sameDay: true, how: "none" };
   }
 
   // ---- Address lookup (OpenStreetMap: Photon for suggestions, Nominatim for a final check) ----
-  var BIAS = "&lat=" + SHOP.lat + "&lon=" + SHOP.lng;
+  var BIAS = "&lat=" + CENTRE.lat + "&lon=" + CENTRE.lng;
   function photonToAddr(f) {
     var p = f.properties || {}, c = f.geometry.coordinates;
     var street = [p.housenumber, p.street || (p.type === "street" ? p.name : "")].filter(Boolean).join(" ");
@@ -94,5 +82,5 @@
     return cache[key];
   }
 
-  window.Delivery = { match: match, suggest: suggest, locate: locate, km: km, inside: inside, shop: SHOP, zones: ZONES };
+  window.Delivery = { match: match, suggest: suggest, locate: locate, inside: inside, centre: CENTRE, zones: ZONES };
 })();
