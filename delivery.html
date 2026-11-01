@@ -54,7 +54,7 @@
     <div class="hero-actions"><a class="btn btn-primary" href="tel:0746383622">Call 07 4638 3622</a><a class="btn btn-ghost" href="terms.html">Terms &amp; Conditions</a></div>
   </div>
 </div></section>
-<section style="padding-top:0" id="feeAreas" hidden><div class="wrap"><div class="sec-head"><div><span class="eyebrow">Further afield</span><h2>Outer areas &amp; courier delivery</h2></div><p>Not listed? Give us a call and we'll work something out.</p></div><div class="zone-grid" id="zoneGrid"></div></div></section>
+<section style="padding-top:0" id="feeAreas" hidden><div class="wrap"><div class="sec-head"><div><span class="eyebrow">Further afield</span><h2>Outer area delivery fees</h2></div><p>Same-day delivery when ordered by 2pm Monday to Friday, unless an earlier time is shown. Not listed? Give us a call. Orders to other Australian locations are usually $18.</p></div><div class="zone-grid" id="zoneGrid"></div></div></section>
 </main>
 <footer>
   <div class="wrap">
@@ -77,6 +77,7 @@
 <script src="extras.js"></script>
 <script src="delivery-zones.js"></script>
 <script src="delivery-engine.js"></script>
+<script src="product-options.js"></script>
 <script src="cart.js"></script>
 <script>
 (function () {
@@ -85,10 +86,18 @@
   var free = Z.filter(function (z) { return z.type === "free"; });
   var names = []; free.forEach(function (z) { names = names.concat(z.suburbs || []); });
   document.getElementById("freeAreas").innerHTML = chips(names.sort()) + "<span>…and all Toowoomba suburbs</span>";
-  var paid = Z.filter(function (z) { return z.type !== "free" && ((z.suburbs || []).length || (z.postcodes || []).length); });
+  var paid = Z.filter(function (z) { return z.type !== "free" && (z.suburbs || []).length; });
   if (paid.length) {
-    document.getElementById("zoneGrid").innerHTML = paid.map(function (z) {
-      return "<div class='panel'><span class='eyebrow'>" + (z.type === "courier" ? "Courier" : "Our own driver") + "</span><h3 style='margin-top:6px'>" + z.name + " · " + (z.fee > 0 ? "$" + (+z.fee).toFixed(2) : "Delivery included") + "</h3><p>" + (z.note || "") + "</p><div class='suburbs'>" + chips((z.suburbs || []).slice().sort()) + (z.postcodes && z.postcodes.length ? "<span>Postcodes " + z.postcodes.join(", ") + "</span>" : "") + "</div></div>";
+    var byFee = {};
+    paid.forEach(function (z) {
+      (byFee[z.fee] = byFee[z.fee] || []);
+      z.suburbs.forEach(function (s) {
+        var c = z.cutoffHour && z.cutoffHour < 14 ? (z.cutoffHour > 12 ? z.cutoffHour - 12 + "pm" : z.cutoffHour === 12 ? "12pm" : z.cutoffHour + "am") : "";
+        byFee[z.fee].push(s + (c ? " <small>(order by " + c + ")</small>" : ""));
+      });
+    });
+    document.getElementById("zoneGrid").innerHTML = Object.keys(byFee).sort(function (a, b) { return a - b; }).map(function (fee) {
+      return "<div class='panel'><span class='eyebrow'>Delivery fee</span><h3 style='margin-top:6px'>$" + (+fee).toFixed(2) + "</h3><div class='suburbs'>" + byFee[fee].sort().map(function (s) { return "<span>" + s + "</span>"; }).join("") + "</div></div>";
     }).join("");
     document.getElementById("feeAreas").hidden = false;
   }

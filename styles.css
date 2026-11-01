@@ -440,3 +440,16 @@ button.btn-ghost{background:transparent;color:var(--ink);cursor:pointer;font:inh
 form.order label.payopt{display:flex;gap:12px;margin:0;font-size:inherit;font-weight:400}
 form.order label.agree{display:flex;gap:10px;align-items:center;margin:0;font-size:.92rem;font-weight:400}
 @media (max-width:480px){.nav-cta .phone{display:none}.nav-cta{gap:4px}}
+/* Product options (size, colour, occasion) */
+.popts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:0 0 18px}
+.popts label{display:flex;flex-direction:column;gap:5px;font-size:.85rem;font-weight:600}
+.popts select{padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-weight:400;background:#fff;color:var(--ink)}
+.popts select:focus{outline:none;border-color:var(--leaf)}
+/* Extras with choices */
+.xcard select{width:100%;margin-top:6px;padding:7px 8px;border:1.5px solid var(--line);border-radius:9px;font:inherit;font-size:.82rem;background:#fff;color:var(--ink)}
+.xstrip .xcard{flex:0 0 170px}
+.xdesc{color:var(--muted);font-size:.85rem;margin-bottom:4px}
+.xpage-grid .xcard .xbody{padding:14px 16px 4px}
+.xpage-grid .xcard .xbody b{font-family:Oswald,sans-serif;font-size:1.2rem}
+.xpage-grid .xadd{margin:10px 16px 16px;padding:10px}
+.lopts{display:block;color:var(--muted);font-size:.82rem}

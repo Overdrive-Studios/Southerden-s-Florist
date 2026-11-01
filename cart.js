@@ -21,34 +21,97 @@
   }
   badge();
 
-  // Product pages: quantity +/- and Add to cart
+  function slugify(t) { return String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+  function itemLabel(i) { return i.name + (i.opts ? " (" + i.opts + ")" : ""); }
+  function addItem(p, n) {
+    var c = load(), ex = c.find(function (x) { return x.id === p.id; });
+    if (ex) ex.qty += n; else { p.qty = n; c.push(p); }
+    save(c); toast(itemLabel(p));
+    if (app) render();
+  }
+
+  // ---- Product options: size, colour, occasion (data in product-options.js) ----
+  var PO = window.PRODUCT_OPTIONS || {};
+  var mainBtn = document.querySelector("[data-add]:not([data-extra])");
+  var prodData = mainBtn ? JSON.parse(mainBtn.dataset.add) : null;
+  var prodOpts = prodData ? PO[prodData.id] : null;
+  if (prodOpts && prodOpts.options.length) {
+    var box = document.createElement("div");
+    box.className = "popts";
+    box.innerHTML = prodOpts.options.map(function (g, gi) {
+      return "<label><span>" + esc(g.label) + "</span><select data-popt='" + gi + "'>" + g.choices.map(function (ch, ci) {
+        return "<option value='" + ci + "'>" + esc(ch[0]) + (ch[1] ? " (+" + money(ch[1]).replace(".00", "") + ")" : "") + "</option>";
+      }).join("") + "</select></label>";
+    }).join("");
+    var actions = document.querySelector(".product .actions");
+    actions.parentNode.insertBefore(box, actions);
+    box.addEventListener("change", showPrice);
+  }
+  function chosenOptions() {
+    if (!prodOpts) return { add: 0, text: "" };
+    var add = 0, parts = [];
+    document.querySelectorAll("[data-popt]").forEach(function (sel) {
+      var g = prodOpts.options[+sel.dataset.popt], ch = g.choices[+sel.value];
+      add += +ch[1] || 0; parts.push(g.label + ": " + ch[0]);
+    });
+    return { add: add, text: parts.join(", ") };
+  }
+  function showPrice() {
+    var bp = document.querySelector(".product .bigprice"); if (!bp || !prodData) return;
+    var o = chosenOptions();
+    bp.firstChild.textContent = (prodOpts && prodOpts.options.length ? "" : "From ") + money(prodData.price + o.add).replace(".00", "") + " ";
+  }
+  if (prodOpts && prodOpts.options.length) showPrice();
+  if (prodOpts && prodOpts.extras === false) document.querySelectorAll("[data-extras-strip]").forEach(function (el) { el.remove(); });
+
+  // ---- Clicks: quantity, add product, add extra ----
   document.addEventListener("click", function (e) {
     var q = e.target.closest("[data-qty]");
     if (q) { var inp = document.getElementById("qty"); inp.value = Math.max(1, (+inp.value || 1) + (+q.dataset.qty)); return; }
+    var xb = e.target.closest("[data-extra-id]");
+    if (xb) {
+      var x = X.find(function (z) { return z.id === xb.dataset.extraId; }), card = xb.closest(".xcard");
+      var ch = x.pick.choices[+card.querySelector("[data-xpick]").value];
+      var c2 = card.querySelector("[data-xpick2]"), second = c2 ? x.pick2.choices[+c2.value] : "";
+      addItem({ id: x.id + "-" + slugify(ch[0]) + (second ? "-" + slugify(second) : ""), name: x.name, opts: ch[0] + (second ? ", " + second : ""), price: ch[1], img: ch[2] || x.img, extra: true }, 1);
+      xb.textContent = "Added ✓"; setTimeout(function () { xb.textContent = "+ Add"; }, 1800);
+      return;
+    }
     var a = e.target.closest("[data-add]");
     if (!a) return;
     var p = JSON.parse(a.dataset.add);
-    var isExtra = a.hasAttribute("data-extra");
-    var n = isExtra ? 1 : Math.max(1, +((document.getElementById("qty") || {}).value) || 1);
-    var opt = isExtra ? null : document.getElementById("opt");
-    if (isExtra) p.extra = true;
-    if (opt) { p.name += " (" + opt.value + ")"; p.id += "-" + opt.value.toLowerCase().replace(/\W+/g, "-"); }
-    var c = load(), ex = c.find(function (x) { return x.id === p.id; });
-    if (ex) ex.qty += n; else { p.qty = n; c.push(p); }
-    save(c); toast(p.name);
-    if (isExtra) { a.textContent = "Added ✓"; setTimeout(function () { a.textContent = "+ Add"; }, 1800); }
-    if (app) render();
+    if (a.hasAttribute("data-extra")) { p.extra = true; return addItem(p, 1); }   // old-style extra buttons
+    var n = Math.max(1, +((document.getElementById("qty") || {}).value) || 1);
+    var o = chosenOptions();
+    if (o.text) { p.opts = o.text; p.price = p.price + o.add; p.id += "|" + slugify(o.text); }
+    addItem(p, n);
   });
 
-  // Extras strip (product pages and cart)
+  // ---- Extras cards (product pages, cart and the Add-On Extras page) ----
   var X = window.EXTRAS || [];
   function extraCard(x, inCart) {
-    return "<div class='xcard'><span class='art'><img src='" + root + "images/" + esc(x.img) + "' alt='' loading='lazy' onerror='this.remove()'></span>" +
-      "<div class='xbody'><b>" + esc(x.name) + "</b><span>" + money(x.price) + "</span></div>" +
-      "<button type='button' class='xadd' data-extra data-add='" + esc(JSON.stringify({ id: x.id, name: x.name, price: x.price, img: x.img })) + "'>" + (inCart ? "Add another" : "+ Add") + "</button></div>";
+    var first = x.pick.choices[0];
+    return "<div class='xcard'><span class='art'><img src='" + root + "images/" + esc(first[2] || x.img) + "' alt='' loading='lazy' onerror='this.remove()'></span>" +
+      "<div class='xbody'><b>" + esc(x.name) + "</b><span class='xprice'>" + money(first[1]) + "</span>" +
+      "<select data-xpick aria-label='" + esc(x.pick.label) + "'>" + x.pick.choices.map(function (ch, i) {
+        var same = x.pick.choices.every(function (c) { return c[1] === first[1]; });
+        return "<option value='" + i + "'>" + esc(ch[0]) + (same ? "" : " · " + money(ch[1]).replace(".00", "")) + "</option>";
+      }).join("") + "</select>" +
+      (x.pick2 ? "<select data-xpick2 aria-label='" + esc(x.pick2.label) + "'>" + x.pick2.choices.map(function (c, i) { return "<option value='" + i + "'>" + esc(c) + "</option>"; }).join("") + "</select>" : "") +
+      "</div><button type='button' class='xadd' data-extra-id='" + esc(x.id) + "'>" + (inCart ? "Add another" : "+ Add") + "</button></div>";
   }
+  document.addEventListener("change", function (e) {
+    var sel = e.target.closest("[data-xpick]"); if (!sel) return;
+    var card = sel.closest(".xcard"), x = X.find(function (z) { return z.id === card.querySelector("[data-extra-id]").dataset.extraId; });
+    var ch = x.pick.choices[+sel.value];
+    card.querySelector(".xprice").textContent = money(ch[1]);
+    var img = card.querySelector("img"); if (img && (ch[2] || x.img)) img.src = root + "images/" + (ch[2] || x.img);
+  });
   document.querySelectorAll("[data-extras-strip]").forEach(function (el) {
     el.innerHTML = "<h3>Add an extra</h3><p class='hint'>Make it extra special. Extras are delivered with your flowers.</p><div class='xgrid'>" + X.map(function (x) { return extraCard(x); }).join("") + "</div>";
+  });
+  document.querySelectorAll("[data-extras-page]").forEach(function (el) {
+    el.innerHTML = X.map(function (x) { return extraCard(x).replace("</span><select data-xpick", "</span><p class='xdesc'>" + esc(x.desc || "") + "</p><select data-xpick"); }).join("");
   });
 
   function toast(name) {
@@ -78,9 +141,9 @@
 
   // ---- dates ----
   function brisNow() { return new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Brisbane" })); }
-  function earliest() {
+  function earliest(cutoff) {
     var now = brisNow(), d = new Date(now);
-    if (now.getHours() >= (S.cutoffHour || 14)) d.setDate(d.getDate() + 1);
+    if (now.getHours() >= (cutoff || S.cutoffHour || 14)) d.setDate(d.getDate() + 1);
     while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
     return d;
   }
@@ -116,7 +179,7 @@
     opts = opts || {};
     var d = currentDelivery(), sub = total(c);
     var lines = c.map(function (i) {
-      return "<div class='sline'><span class='art'><img src='" + root + "images/" + esc(i.img) + "' alt='' onerror='this.remove()'></span><span>" + esc(i.name) + (i.qty > 1 ? " <small>× " + i.qty + "</small>" : "") + "</span><b>" + money(i.price * i.qty) + "</b></div>";
+      return "<div class='sline'><span class='art'><img src='" + root + "images/" + esc(i.img) + "' alt='' onerror='this.remove()'></span><span>" + esc(i.name) + (i.qty > 1 ? " <small>× " + i.qty + "</small>" : "") + (i.opts ? "<br><small>" + esc(i.opts) + "</small>" : "") + "</span><b>" + money(i.price * i.qty) + "</b></div>";
     }).join("");
     var feeTxt = !d ? (opts.step === "cart" ? "Calculated next" : "Enter address") : d.unknown ? "To be confirmed" : d.fee > 0 ? money(d.fee) : "Included";
     var grand = sub + (d && !d.unknown ? d.fee : 0);
@@ -135,7 +198,7 @@
       X.map(function (x) { return extraCard(x, inCart[x.id]); }).join("") + "</div><button type='button' class='xarrow xnext' aria-label='More extras'>›</button></div><div class='xdots'></div></div>";
     var lines = c.map(function (i, k) {
       return "<div class='line'><span class='art'><img src='" + root + "images/" + esc(i.img) + "' alt='' onerror='this.remove()'></span>" +
-        "<div><h4>" + esc(i.name) + "</h4><div style='margin-top:6px'><span class='qty'><button type='button' data-l='" + k + "' data-d='-1' aria-label='Less'>−</button><input value='" + i.qty + "' readonly aria-label='Quantity'><button type='button' data-l='" + k + "' data-d='1' aria-label='More'>+</button></span>" +
+        "<div><h4>" + esc(i.name) + "</h4>" + (i.opts ? "<small class='lopts'>" + esc(i.opts) + "</small>" : "") + "<div style='margin-top:6px'><span class='qty'><button type='button' data-l='" + k + "' data-d='-1' aria-label='Less'>−</button><input value='" + i.qty + "' readonly aria-label='Quantity'><button type='button' data-l='" + k + "' data-d='1' aria-label='More'>+</button></span>" +
         "<button type='button' class='rm' data-rm='" + k + "'>Remove</button></div></div><b>" + money(i.price * i.qty) + "</b></div>";
     }).join("");
     var ok = hasFlowers(c);
@@ -260,7 +323,7 @@
     var info = document.getElementById("delivInfo"); if (!info) return null;
     var c = load(), sub = total(c), f = fields();
     var d = (f.street || f.suburb) ? DV.match(loc, f.suburb) : null;
-    var label = document.getElementById("delivLabel"), fee = document.getElementById("delivFee"), dateEl = document.getElementById("dd"), base = earliest();
+    var label = document.getElementById("delivLabel"), fee = document.getElementById("delivFee"), dateEl = document.getElementById("dd");
     if (checking === true || (locating && !loc)) {
       info.innerHTML = "<div class='deliv deliv-checking'><b>Checking the delivery address…</b></div>";
       label.textContent = "Delivery"; fee.textContent = "Checking…"; d = null;
@@ -271,6 +334,7 @@
       label.textContent = d.unknown ? "Delivery" : d.name;
       fee.textContent = d.unknown ? "To be confirmed" : d.fee > 0 ? money(d.fee) : "Included";
     }
+    var base = earliest(d && d.cutoffHour);                                // zones with an earlier cut-off
     var min = (d && d.sameDay === false) ? nextBusinessDay(base) : base;   // courier zones can't be same-day
     dateEl.min = iso(min);
     if (dateEl.value && dateEl.value < dateEl.min) { dateEl.value = dateEl.min; draft.delivery_date = dateEl.value; saveDraft(); }
@@ -316,7 +380,7 @@
     var order = {
       number: orderNumber(),
       placed: now.toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) + ", " + now.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }),
-      items: c.map(function (i) { return { name: i.name, qty: i.qty, price: i.price, extra: !!i.extra, img: i.img }; }),
+      items: c.map(function (i) { return { name: i.name, opts: i.opts || "", qty: i.qty, price: i.price, extra: !!i.extra, img: i.img }; }),
       delivery: { date: draft.delivery_date, zone: d.name, unknown: !!d.unknown, fee: fee, how: d.how },
       recipient: { name: draft.recipient_name, address: draft.address, suburb: draft.suburb, postcode: draft.postcode, phone: draft.recipient_phone },
       card: draft.card_message || "",
@@ -336,8 +400,8 @@
       address: order.recipient.address + ", " + order.recipient.suburb + " QLD " + order.recipient.postcode,
       recipient_phone: order.recipient.phone,
       card_message: order.card || "(none)",
-      items: order.items.filter(function (i) { return !i.extra; }).map(function (i) { return i.qty + " x " + i.name + " (" + money(i.price * i.qty) + ")"; }).join("\n"),
-      extras: order.items.filter(function (i) { return i.extra; }).map(function (i) { return i.qty + " x " + i.name + " (" + money(i.price * i.qty) + ")"; }).join("\n") || "(none)",
+      items: order.items.filter(function (i) { return !i.extra; }).map(function (i) { return i.qty + " x " + itemLabel(i) + " (" + money(i.price * i.qty) + ")"; }).join("\n"),
+      extras: order.items.filter(function (i) { return i.extra; }).map(function (i) { return i.qty + " x " + itemLabel(i) + " (" + money(i.price * i.qty) + ")"; }).join("\n") || "(none)",
       delivery: d.unknown ? "TO BE CONFIRMED: not in a listed delivery area" : d.name + " (" + (fee > 0 ? money(fee) : "delivery included") + ")",
       delivery_matched_by: d.how === "area" ? "address is inside the " + d.name + " area on the map" : d.how === "suburb" ? "suburb name (" + order.recipient.suburb + ")" + (loc ? "" : ", address not found on the map") : "no match, please check",
       subtotal: money(sub),
@@ -371,7 +435,7 @@
   // ---- STEP 4: Confirmation ----
   function renderConfirmation(o) {
     var flowers = o.items.filter(function (i) { return !i.extra; }), extras = o.items.filter(function (i) { return i.extra; });
-    var row = function (i) { return "<tr><td>" + esc(i.name) + (i.qty > 1 ? " × " + i.qty : "") + "</td><td>" + money(i.price * i.qty) + "</td></tr>"; };
+    var row = function (i) { return "<tr><td>" + esc(i.name) + (i.qty > 1 ? " × " + i.qty : "") + (i.opts ? "<br><small class='muted'>" + esc(i.opts) + "</small>" : "") + "</td><td>" + money(i.price * i.qty) + "</td></tr>"; };
     var next = o.payment === "card"
       ? "<li><b>Complete your payment</b> using the button below. Please include your order number <b>" + o.number + "</b>.</li><li>We'll prepare your order once payment is received.</li>"
       : "<li><b>We'll call you</b> on " + esc(o.sender.phone) + " to confirm your order and take payment.</li><li>We'll then prepare your flowers fresh for delivery.</li>";

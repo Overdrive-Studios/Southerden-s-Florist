@@ -17,7 +17,7 @@
   }
 
   function result(z, how) {
-    return { id: z.id, type: z.type, name: z.name, note: z.note, fee: +z.fee || 0, sameDay: z.sameDay !== false, how: how };
+    return { id: z.id, type: z.type, name: z.name, note: z.note, fee: +z.fee || 0, sameDay: z.sameDay !== false, cutoffHour: z.cutoffHour, how: how };
   }
 
   // loc = {lat, lng} or null; suburb = text
