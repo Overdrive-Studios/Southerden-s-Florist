@@ -210,7 +210,7 @@
       "<div><span id='delivLabel'>" + (d && !d.unknown ? esc(d.name) : "Delivery") + "</span><span id='delivFee'>" + feeTxt + "</span></div>" +
       "<div class='grand'><span>Total incl. GST</span><span id='grandTotal'>" + money(grand) + (d && d.unknown ? " + delivery" : "") + "</span></div></div>" +
       (opts.button || "") +
-      "<p class='hint' style='margin-top:12px'>Delivery is included in the Toowoomba area. Some outer areas have a delivery fee, shown once you enter the delivery address.</p></aside>";
+      "<p class='hint' style='margin-top:12px'>Delivery is included in the Toowoomba area. Some outer areas have a small fee. <a href='delivery.html#fees' target='_blank'>See delivery prices</a></p></aside>";
   }
 
   // ---- STEP 1: Cart ----
@@ -256,6 +256,12 @@
     return "<div class='f " + (cls || "") + "'><label for='" + id + "'>" + label + "</label><input id='" + id + "' name='" + name + "' " + (attrs || "") + "><span class='ferr'></span></div>";
   }
 
+  function feeList() {
+    var by = {};
+    (window.DELIVERY_ZONES || []).forEach(function (z) { if (z.fee && z.suburbs) (by[z.fee] = by[z.fee] || []).push.apply(by[z.fee], z.suburbs); });
+    var rows = Object.keys(by).sort(function (a, b) { return a - b; }).map(function (f) { return "<li><b>$" + f + "</b><span>" + by[f].sort().join(", ") + "</span></li>"; }).join("");
+    return "<details class='fee-peek'><summary>Delivery prices for outer areas</summary><ul><li class='inc'><b>Included</b><span>All Toowoomba suburbs, Highfields, Ballard, Blue Mountain Heights</span></li>" + rows + "</ul><p>Not listed? We'll call you to confirm. Other Australian locations are usually $18.</p></details>";
+  }
   function renderDetails(c) {
     var place = draft.delivery_type || "home";
     app.innerHTML = stepper(1) + "<div class='checkout details-step'><div class='checkout-main'><form class='order dform' id='orderForm' novalidate>" +
@@ -273,7 +279,7 @@
         "<div class='f full' id='placeField'><label for='pd'></label><input id='pd' name='place_detail' autocomplete='off'><span class='ferr'></span></div>" +
         "<div class='f'><label for='sb'>Suburb or town</label><input id='sb' name='suburb' required list='suburbList' autocomplete='off' placeholder='e.g. Toowoomba'><datalist id='suburbList'>" + allSuburbs.map(function (x) { return "<option value='" + esc(x) + "'>"; }).join("") + "</datalist><span class='ferr'></span></div>" +
         fld("pc", "postcode", "Postcode", "required inputmode='numeric' pattern='[0-9]{4}' maxlength='4' placeholder='e.g. 4350'") +
-        "</div><div id='delivInfo' aria-live='polite'></div>") +
+        "</div><div id='delivInfo' aria-live='polite'></div>" + feeList()) +
       sec(3, "when", "When should it arrive?", "Monday to Friday. For Saturday delivery, please call us on " + esc(S.phone) + ".",
         "<div class='chips date-chips' id='dateChips' role='radiogroup' aria-label='Delivery date'></div>" +
         "<div class='f other-date' id='otherDate' hidden><label for='ddPick'>Choose a date</label><input type='date' id='ddPick'></div>" +
@@ -286,7 +292,7 @@
         "<div class='fields'>" + fld("sn", "sender_name", "Your name", "required autocomplete='name'") +
         fld("sp", "sender_phone", "Your phone", "type='tel' required autocomplete='tel' inputmode='tel'") +
         fld("em", "email", "Your email", "type='email' required autocomplete='email'", "full") +
-        "<div class='f full'><label for='nt'>Anything else we should know? <em>(optional)</em></label><textarea id='nt' name='notes' rows='2' placeholder='Colour preferences, gate code, best time to deliver'></textarea></div></div>") +
+        "<div class='f full'><label for='nt'>Anything else we should know?</label><textarea id='nt' name='notes' rows='2' placeholder='Colour preferences, gate code, best time to deliver'></textarea></div></div>") +
       "<div class='step-nav sticky-nav'><a href='#cart' class='btn btn-ghost'>← Cart</a><button class='btn btn-primary' type='submit' id='toPayment'>Continue to payment <span id='navTotal'></span></button></div>" +
       "</form></div>" + summary(c, { step: "details" }) + "</div>";
 
@@ -302,7 +308,7 @@
     function setPlace() {
       var v = (form.querySelector("[name=delivery_type]:checked") || {}).value || "home", pl = PLACES.find(function (x) { return x[0] === v; });
       var pf = document.getElementById("placeField"), pd = document.getElementById("pd");
-      pf.querySelector("label").innerHTML = esc(pl[2]) + (pl[3] ? "" : " <em>(optional)</em>");
+      pf.querySelector("label").innerHTML = esc(pl[2]) + (pl[3] ? "" : "");
       pd.placeholder = pl[4]; pd.required = pl[3];
       var hn = document.getElementById("hn"); hn.required = v === "home";
       hn.previousElementSibling.innerHTML = "Number" + (v === "home" ? "" : " <em>(if known)</em>");

@@ -30,7 +30,14 @@
 </header>
 <main>
 <section class="page-hero"><div class="wrap">
-  <div class="crumbs"><a href="index.html">Home</a> › Delivery</div><span class="eyebrow">Yes, we deliver… daily</span><h1>Delivery</h1><p>For all your flower deliveries around Toowoomba and the Darling Downs, we go that extra mile. For out-of-town deliveries or places that seem remote, we go where others don't. Just call us.</p></div></section><section><div class="wrap delivery-grid">
+  <div class="crumbs"><a href="index.html">Home</a> › Delivery</div><span class="eyebrow">Yes, we deliver… daily</span><h1>Delivery</h1><p>For all your flower deliveries around Toowoomba and the Darling Downs, we go that extra mile. For out-of-town deliveries or places that seem remote, we go where others don't. Just call us.</p><div class="hero-actions"><a class="btn btn-primary" href="#fees">See delivery prices</a></div></div></section>
+<section class="fees-top" id="fees"><div class="wrap"><div class="fee-board">
+  <div class="fee-board-head"><div><span class="eyebrow">Delivery prices</span><h2>What does delivery cost?</h2><p>Delivery is included in the Toowoomba area. Outer areas have a small fee, listed below. Same-day delivery when ordered by 2pm Monday to Friday, unless an earlier time is shown.</p></div>
+  <label class="sub-check"><span>Check your suburb</span><input id="subCheck" type="search" placeholder="e.g. Highfields, Oakey" autocomplete="off" list="subList"><datalist id="subList"></datalist><output id="subResult"></output></label></div>
+  <div class="fee-rows" id="feeRows"></div>
+  <p class="fee-foot">Not listed? Give us a call on <a href="tel:0746383622">07 4638 3622</a>. Orders to other Australian locations are usually $18.</p>
+</div></div></section>
+<section style="padding-top:0"><div class="wrap delivery-grid">
   <div class="panel"><h3>How it works</h3>
     <div class="facts">
       <div class="fact"><b>2pm</b><span>Order cut-off for same-day local delivery, Mon–Fri</span></div>
@@ -47,14 +54,13 @@
       <li>We make 2 delivery runs a day around Toowoomba, Monday to Friday.</li>
       <li>Saturday deliveries are by prior arrangement. Please call us.</li>
       <li>Timed deliveries need to be ordered at least 2 hours before the time you'd like. We'll do our best, but times can't be guaranteed.</li>
-      <li>Delivery within Toowoomba is included in our prices. Some outer areas have a delivery fee, and checkout shows it once you enter the suburb and postcode.</li>
+      <li>Delivery within Toowoomba is included in our prices. Some outer areas have a delivery fee. See the <a href="#fees">delivery prices</a> above.</li>
       <li>Our shop hours are Monday to Friday, 9am to 3pm.</li>
     </ul>
     <p style="margin-top:18px">Please read our <a href="terms.html">Terms &amp; Conditions</a> for full details on pricing, substitutions and our quality guarantee.</p>
     <div class="hero-actions"><a class="btn btn-primary" href="tel:0746383622">Call 07 4638 3622</a><a class="btn btn-ghost" href="terms.html">Terms &amp; Conditions</a></div>
   </div>
 </div></section>
-<section style="padding-top:0" id="feeAreas" hidden><div class="wrap"><div class="sec-head"><div><span class="eyebrow">Further afield</span><h2>Outer area delivery fees</h2></div><p>Same-day delivery when ordered by 2pm Monday to Friday, unless an earlier time is shown. Not listed? Give us a call. Orders to other Australian locations are usually $18.</p></div><div class="zone-grid" id="zoneGrid"></div></div></section>
 </main>
 <footer>
   <div class="wrap">
@@ -87,21 +93,33 @@
   var free = Z.filter(function (z) { return z.type === "free"; });
   var names = []; free.forEach(function (z) { names = names.concat(z.suburbs || []); });
   document.getElementById("freeAreas").innerHTML = chips(names.sort()) + "<span>…and all Toowoomba suburbs</span>";
-  var paid = Z.filter(function (z) { return z.type !== "free" && (z.suburbs || []).length; });
-  if (paid.length) {
-    var byFee = {};
-    paid.forEach(function (z) {
-      (byFee[z.fee] = byFee[z.fee] || []);
-      z.suburbs.forEach(function (s) {
-        var c = z.cutoffHour && z.cutoffHour < 14 ? (z.cutoffHour > 12 ? z.cutoffHour - 12 + "pm" : z.cutoffHour === 12 ? "12pm" : z.cutoffHour + "am") : "";
-        byFee[z.fee].push(s + (c ? " <small>(order by " + c + ")</small>" : ""));
-      });
-    });
-    document.getElementById("zoneGrid").innerHTML = Object.keys(byFee).sort(function (a, b) { return a - b; }).map(function (fee) {
-      return "<div class='panel'><span class='eyebrow'>Delivery fee</span><h3 style='margin-top:6px'>$" + (+fee).toFixed(2) + "</h3><div class='suburbs'>" + byFee[fee].sort().map(function (s) { return "<span>" + s + "</span>"; }).join("") + "</div></div>";
-    }).join("");
-    document.getElementById("feeAreas").hidden = false;
-  }
+  function ct(h) { return h > 12 ? h - 12 + "pm" : h === 12 ? "12pm" : h + "am"; }
+  var rows = [], byFee = {};
+  Z.filter(function (z) { return z.type !== "free" && (z.suburbs || []).length; }).forEach(function (z) {
+    if (!byFee[z.fee]) { byFee[z.fee] = { fee: +z.fee, sub: [] }; }
+    z.suburbs.forEach(function (s) { byFee[z.fee].sub.push([s, z.cutoffHour && z.cutoffHour < 14 ? ct(z.cutoffHour) : ""]); });
+  });
+  Object.keys(byFee).sort(function (a, b) { return a - b; }).forEach(function (k) { rows.push(byFee[k]); });
+  document.getElementById("feeRows").innerHTML = rows.map(function (r) {
+    return "<div class='fee-row" + (r.fee ? "" : " inc") + "'><div class='fee-price'>" + (r.fee ? "$" + r.fee : "Included") + "</div><div class='fee-subs'>" +
+      r.sub.sort(function (a, b) { return a[0] === "all Toowoomba suburbs" ? 1 : b[0] === "all Toowoomba suburbs" ? -1 : a[0].localeCompare(b[0]); })
+        .map(function (s) { return "<span>" + s[0] + (s[1] ? " <small>order by " + s[1] + "</small>" : "") + "</span>"; }).join("") + "</div></div>";
+  }).join("") + "<div class='fee-row inc'><div class='fee-price'>Included</div><div class='fee-inc-text'>Toowoomba and all its suburbs, plus Highfields, Ballard and Blue Mountain Heights</div></div>";
+  // suburb checker
+  var all = []; Z.forEach(function (z) { (z.suburbs || []).forEach(function (s) { all.push(s); }); });
+  document.getElementById("subList").innerHTML = all.sort().map(function (s) { return "<option value='" + s + "'>"; }).join("");
+  var inp = document.getElementById("subCheck"), out = document.getElementById("subResult");
+  inp.addEventListener("input", function () {
+    var q = inp.value.trim(); out.className = ""; out.innerHTML = "";
+    if (q.length < 3) return;
+    var m = window.Delivery && Delivery.match(null, q);
+    if (m && !m.unknown) {
+      out.className = m.fee ? "fee" : "inc";
+      out.innerHTML = m.fee ? "<b>$" + m.fee + " delivery</b> to " + q + (m.cutoffHour && m.cutoffHour < 14 ? ". Order by " + ct(m.cutoffHour) + " for same day." : ".") : "<b>Delivery included</b> to " + q + ".";
+    } else if (!all.some(function (s) { return s.toLowerCase().indexOf(q.toLowerCase()) === 0; })) {
+      out.className = "unk"; out.innerHTML = "Not on our list. Call us on 07 4638 3622 and we'll sort it out.";
+    }
+  });
 })();
 </script>
 </body>
