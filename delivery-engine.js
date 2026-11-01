@@ -61,13 +61,70 @@
       .then(function (j) { return (j.features || []).filter(function (f) { return (f.properties || {}).countrycode === "AU"; }).map(photonToAddr); })
       .catch(function () { return []; });
   }
+  // ---- Street search for checkout ----
+  // Streets only (every street in the area is on the map, but not every house number),
+  // limited to the delivery region, with common abbreviations expanded.
+  var REGION = { minLon: 151.0, minLat: -28.3, maxLon: 152.45, maxLat: -26.9 };
+  var ABBR = { st: "Street", rd: "Road", ave: "Avenue", av: "Avenue", dr: "Drive", ct: "Court", cres: "Crescent", cr: "Crescent",
+    pl: "Place", tce: "Terrace", pde: "Parade", hwy: "Highway", ln: "Lane", cl: "Close", cct: "Circuit", bvd: "Boulevard", blvd: "Boulevard",
+    esp: "Esplanade", gr: "Grove", sq: "Square", wy: "Way", mt: "Mount", nth: "North", sth: "South" };
+  function expand(q) {
+    return String(q || "").replace(/[.,]/g, " ").split(/\s+/).filter(Boolean).map(function (w) { var k = w.toLowerCase(); return ABBR[k] || w; }).join(" ");
+  }
+  function fetchJSON(url, ms) {
+    var c = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (c) c.abort(); }, ms || 4000);
+    return fetch(url, c ? { signal: c.signal } : {}).then(function (r) { clearTimeout(t); if (!r.ok) throw new Error(r.status); return r.json(); });
+  }
+  var KNOWN = {}; ZONES.forEach(function (z) { (z.suburbs || []).forEach(function (x) { KNOWN[norm(x)] = x; }); });
+  function pickSuburb(cands) {
+    var list = cands.filter(Boolean);
+    for (var i = 0; i < list.length; i++) if (KNOWN[norm(list[i])]) return KNOWN[norm(list[i])];
+    for (var j = 0; j < list.length; j++) if (!/\b(estate|precinct|grove estate|park estate|village)\b/i.test(list[j])) return list[j];
+    return list[0] || "";
+  }
+  var postcodes = {};   // suburb -> postcode, learnt from suggestions
+  function streets(q) {
+    var text = expand(q).replace(/^\d+[a-z]?(\s*[\/-]\s*\d+[a-z]?)?\s+/i, "");   // ignore a leading house number
+    if (text.length < 3) return Promise.resolve({ ok: true, list: [] });
+    var key = (window.SITE || {}).geoapifyKey, req;
+    if (key) {
+      req = fetchJSON("https://api.geoapify.com/v1/geocode/autocomplete?type=street&lang=en&limit=10&format=json" +
+        "&filter=rect:" + [REGION.minLon, REGION.minLat, REGION.maxLon, REGION.maxLat].join(",") +
+        "&bias=proximity:" + CENTRE.lng + "," + CENTRE.lat + "&text=" + encodeURIComponent(text) + "&apiKey=" + encodeURIComponent(key))
+        .then(function (j) {
+          return (j.results || []).map(function (r) {
+            return { street: r.street || r.name || "", suburb: pickSuburb([r.suburb, r.city, r.district, r.county]), postcode: r.postcode || "", lat: r.lat, lng: r.lon };
+          });
+        });
+    } else {
+      req = fetchJSON("https://photon.komoot.io/api/?limit=12&lang=en&layer=street&bbox=" +
+        [REGION.minLon, REGION.minLat, REGION.maxLon, REGION.maxLat].join(",") + BIAS + "&q=" + encodeURIComponent(text))
+        .then(function (j) {
+          return (j.features || []).filter(function (f) { return (f.properties || {}).countrycode === "AU"; }).map(function (f) {
+            var p = f.properties, c = f.geometry.coordinates;
+            return { street: p.name || p.street || "", suburb: pickSuburb([p.locality, p.district, p.city]), postcode: p.postcode || "", lat: c[1], lng: c[0] };
+          });
+        });
+    }
+    return req.then(function (list) {
+      var seen = {}, out = [];
+      list.forEach(function (x) {
+        if (!x.street || /cycleway|reserve|bikeway|footpath|track$/i.test(x.street)) return;
+        var k = norm(x.street + " " + x.suburb); if (seen[k]) return; seen[k] = 1;
+        if (x.suburb && x.postcode) postcodes[norm(x.suburb)] = x.postcode;
+        out.push(x);
+      });
+      return { ok: true, list: out.slice(0, 7) };
+    }).catch(function () { return { ok: false, list: [] }; });
+  }
+  function postcodeFor(suburb) { return postcodes[norm(suburb)] || ""; }
+
   var cache = {};
   function locate(street, suburb, postcode) {
     var key = [street, suburb, postcode].join("|").toLowerCase();
     if (cache[key]) return cache[key];
     var q = [street, suburb, "QLD", postcode, "Australia"].filter(Boolean).join(", ");
-    cache[key] = fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=au&limit=1&addressdetails=1&q=" + encodeURIComponent(q))
-      .then(function (r) { return r.json(); })
+    cache[key] = fetchJSON("https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=au&limit=1&addressdetails=1&q=" + encodeURIComponent(q), 5000)
       .then(function (j) {
         if (j && j[0]) {
           var a = j[0].address || {};
@@ -78,9 +135,9 @@
         }
         return null;
       })
-      .catch(function () { return null; });
+      .catch(function () { delete cache[key]; return null; });
     return cache[key];
   }
 
-  window.Delivery = { match: match, suggest: suggest, locate: locate, inside: inside, centre: CENTRE, zones: ZONES };
+  window.Delivery = { match: match, suggest: suggest, streets: streets, postcodeFor: postcodeFor, expand: expand, locate: locate, inside: inside, centre: CENTRE, zones: ZONES };
 })();

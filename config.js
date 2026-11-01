@@ -12,6 +12,10 @@ window.SITE = {
   // online after placing the order. While empty, the shop takes payment by phone.
   paymentLink: "",
 
+  // Optional: a free Geoapify key (geoapify.com, sign up with the shop email, no card needed).
+  // Makes the street search at checkout faster and more reliable. Leave empty to use OpenStreetMap's free search.
+  geoapifyKey: "",
+
   phone: "07 4638 3622",
   cutoffHour: 14 // same-day delivery cut-off (2pm, Mon–Fri)
 };

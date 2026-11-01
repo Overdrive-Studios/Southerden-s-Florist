@@ -235,7 +235,7 @@
 
   // ---- STEP 2: Delivery & details ----
   var PLACES = [
-    ["home", "Home", "Unit or apartment number", false, "e.g. Unit 4"],
+    ["home", "Home", "Unit, flat or building", false, "e.g. Unit 4 or Flat 2"],
     ["work", "Workplace", "Business name", true, "e.g. Toowoomba Dental"],
     ["hospital", "Hospital or care home", "Hospital or home, ward and room", true, "e.g. St Vincent's, Ward 3, Room 12"],
     ["funeral", "Funeral or church", "Funeral home or church, and service time", true, "e.g. Toowoomba Funerals, 11am service"]
@@ -266,8 +266,10 @@
         "<div class='chips place-chips' role='radiogroup' aria-label='Type of place'>" + PLACES.map(function (pl) {
           return "<label class='chip'><input type='radio' name='delivery_type' value='" + pl[0] + "'" + (pl[0] === place ? " checked" : "") + "><span>" + pl[1] + "</span></label>";
         }).join("") + "</div>" +
-        "<div class='fields'>" +
-        "<div class='f full addr-wrap'><label for='ad'>Street address</label><div class='search-in'>" + ICON.search + "<input id='ad' name='address' required autocomplete='off' placeholder='Start typing, e.g. 12 Ruthven Street'></div><div class='addr-sugg' id='addrSugg' role='listbox' hidden></div><span class='ferr'></span></div>" +
+        "<div class='fields addr-row'>" +
+        "<div class='f num'><label for='hn'>Number</label><input id='hn' name='house_number' autocomplete='off' placeholder='e.g. 12'><span class='ferr'></span></div>" +
+        "<div class='f addr-wrap street'><label for='ad'>Street</label><div class='search-in'>" + ICON.search + "<input id='ad' name='street_name' required autocomplete='off' spellcheck='false' placeholder='Start typing the street name' role='combobox' aria-autocomplete='list' aria-expanded='false' aria-controls='addrSugg'><span class='addr-spin' id='addrSpin' hidden></span></div><div class='addr-sugg' id='addrSugg' role='listbox' hidden></div><span class='ferr'></span></div>" +
+        "</div><div class='fields'>" +
         "<div class='f full' id='placeField'><label for='pd'></label><input id='pd' name='place_detail' autocomplete='off'><span class='ferr'></span></div>" +
         "<div class='f'><label for='sb'>Suburb or town</label><input id='sb' name='suburb' required list='suburbList' autocomplete='off' placeholder='e.g. Toowoomba'><datalist id='suburbList'>" + allSuburbs.map(function (x) { return "<option value='" + esc(x) + "'>"; }).join("") + "</datalist><span class='ferr'></span></div>" +
         fld("pc", "postcode", "Postcode", "required inputmode='numeric' pattern='[0-9]{4}' maxlength='4' placeholder='e.g. 4350'") +
@@ -279,8 +281,7 @@
       sec(4, "card", "Card message", "Optional. We'll handwrite it on a card with the flowers.",
         "<div class='chips idea-chips'>" + CARD_IDEAS.map(function (t) { return "<button type='button' class='chip-btn' data-idea='" + esc(t) + "'>" + esc(t) + "</button>"; }).join("") + "</div>" +
         "<div class='f full'><label for='cm'>Message</label><textarea id='cm' name='card_message' rows='3' maxlength='250' placeholder='Write your message, or tap an idea above'></textarea><span class='count' id='cmCount'>0 / 250</span></div>" +
-        "<div class='fields'><div class='f'><label for='cf'>From</label><input id='cf' name='card_from' autocomplete='off' placeholder='e.g. Love, Sam and the kids'></div>" +
-        "<label class='anon-tick'><input type='checkbox' id='anon' name='card_anonymous' value='yes'><span>Send anonymously<small>No name on the card</small></span></label></div>") +
+        "<div class='fields'><div class='f full'><label for='cf'>From <em>(optional)</em></label><input id='cf' name='card_from' autocomplete='off' placeholder='e.g. Love, Sam and the kids'></div></div>") +
       sec(5, "you", "Your details", "So we can confirm your order and contact you if needed.",
         "<div class='fields'>" + fld("sn", "sender_name", "Your name", "required autocomplete='name'") +
         fld("sp", "sender_phone", "Your phone", "type='tel' required autocomplete='tel' inputmode='tel'") +
@@ -290,6 +291,10 @@
       "</form></div>" + summary(c, { step: "details" }) + "</div>";
 
     var form = document.getElementById("orderForm");
+    if (draft.address && !draft.street_name) {
+      var mm = draft.address.match(/^((?:unit\s*)?\d+[a-z]?(?:\s*[\/-]\s*\d+[a-z]?)?)\s+(.*)$/i);
+      if (mm) { draft.house_number = mm[1]; draft.street_name = mm[2]; } else draft.street_name = draft.address;
+    }
     Object.keys(draft).forEach(function (k) {
       var el = form.elements[k]; if (k[0] === "_" || !el || !draft[k]) return;
       if (el.type === "checkbox") el.checked = true; else if (!(el instanceof RadioNodeList) && el.type !== "radio") el.value = draft[k];
@@ -299,19 +304,20 @@
       var pf = document.getElementById("placeField"), pd = document.getElementById("pd");
       pf.querySelector("label").innerHTML = esc(pl[2]) + (pl[3] ? "" : " <em>(optional)</em>");
       pd.placeholder = pl[4]; pd.required = pl[3];
+      var hn = document.getElementById("hn"); hn.required = v === "home";
+      hn.previousElementSibling.innerHTML = "Number" + (v === "home" ? "" : " <em>(if known)</em>");
       draft.delivery_type = v; saveDraft();
     }
     setPlace();
     form.addEventListener("change", function (e) { if (e.target.name === "delivery_type") setPlace(); });
     form.addEventListener("input", function (ev) {
       var t = ev.target; if (!t.name) return;
-      draft[t.name] = t.type === "checkbox" ? (t.checked ? "yes" : "") : t.value; saveDraft();
+      draft[t.name] = t.type === "checkbox" ? (t.checked ? "yes" : "") : t.value;
+      if (t.name === "house_number" || t.name === "street_name") draft.address = fields().street;
+      saveDraft();
       var w = t.closest(".f"); if (w && w.classList.contains("err") && t.value.trim()) { w.classList.remove("err"); }
       if (t.id === "cm") countCard();
-      if (t.id === "anon") document.getElementById("cf").disabled = t.checked;
     });
-    document.getElementById("anon").addEventListener("change", function (e) { document.getElementById("cf").disabled = e.target.checked; draft.card_anonymous = e.target.checked ? "yes" : ""; saveDraft(); });
-    document.getElementById("cf").disabled = !!draft.card_anonymous;
     function countCard() { document.getElementById("cmCount").textContent = document.getElementById("cm").value.length + " / 250"; }
     countCard();
     form.querySelector(".idea-chips").addEventListener("click", function (e) {
@@ -325,8 +331,11 @@
       if (!validate(form)) return;
       var b = document.getElementById("toPayment"); b.disabled = true; b.textContent = "Checking address…";
       new FormData(form).forEach(function (v, k) { draft[k] = v; });
-      draft.card_anonymous = document.getElementById("anon").checked ? "yes" : "";
-      Promise.resolve(lookUp()).then(function () { saveDraft(); go("payment"); });
+      draft.address = fields().street;
+      // never let a slow map service hold the customer up
+      var fd = fields(), dm = DV.match(null, fd.suburb), needMap = (!dm || dm.unknown) || DV.zones.some(function (z) { return (z.areas || []).length; });
+      var look = lookUp();
+      Promise.race([needMap ? look : Promise.resolve(), new Promise(function (r) { setTimeout(r, 4000); })]).then(function () { saveDraft(); go("payment"); });
     });
     setupMobileSummary();
     setupAddress();
@@ -336,7 +345,7 @@
 
   // Friendly inline errors instead of the browser's pop-ups
   var MSG = { recipient_name: "Please enter who the flowers are for.", recipient_phone: "Please enter a phone number for the recipient.",
-    address: "Please enter the street address.", place_detail: "Please fill this in so our driver can find them.", suburb: "Please enter the suburb or town.",
+    house_number: "Please enter the house or unit number.", street_name: "Please enter the street name.", place_detail: "Please fill this in so our driver can find them.", suburb: "Please enter the suburb or town.",
     postcode: "Please enter a 4-digit postcode.", sender_name: "Please enter your name.", sender_phone: "Please enter your phone number.", email: "Please enter a valid email address." };
   function validate(form) {
     var first = null;
@@ -405,7 +414,8 @@
 
   function fields() {
     function v(id, k) { var el = document.getElementById(id); return el ? el.value.trim() : (draft[k] || ""); }
-    return { street: v("ad", "address"), suburb: v("sb", "suburb"), postcode: v("pc", "postcode") };
+    var num = v("hn", "house_number"), st = v("ad", "street_name");
+    return { street: (num ? num + " " : "") + st, suburb: v("sb", "suburb"), postcode: v("pc", "postcode") };
   }
 
   // Look the typed address up on the map (once street + suburb are filled)
@@ -424,52 +434,61 @@
   }
 
   function setupAddress() {
-    var ad = document.getElementById("ad"), box = document.getElementById("addrSugg"), timer, items = [], active = -1;
-    function close() { box.hidden = true; active = -1; }
-    function show(list) {
-      items = list;
-      if (!list.length) return close();
-      box.innerHTML = list.map(function (x, i) { return "<button type='button' role='option' data-i='" + i + "'>" + esc(x.label) + "</button>"; }).join("");
-      box.hidden = false;
+    var ad = document.getElementById("ad"), box = document.getElementById("addrSugg"), spin = document.getElementById("addrSpin");
+    var sb = document.getElementById("sb"), pc = document.getElementById("pc"), hn = document.getElementById("hn");
+    var timer, items = [], active = -1, seq = 0;
+    function open(html) { box.innerHTML = html; box.hidden = false; ad.setAttribute("aria-expanded", "true"); }
+    function close() { box.hidden = true; active = -1; ad.setAttribute("aria-expanded", "false"); }
+    function render(res, q) {
+      items = res.list;
+      if (!res.ok) return open("<div class='sugg-note'>Street search isn't available right now. Just type the street name and fill in the suburb and postcode below.</div>");
+      if (!items.length) return open("<div class='sugg-note'>No streets found for “" + esc(q) + "” in our delivery area. Check the spelling, or just type it in and fill in the suburb and postcode below.</div>");
+      open(items.map(function (x, i) {
+        return "<button type='button' role='option' id='sg" + i + "' data-i='" + i + "'><b>" + esc(x.street) + "</b><span>" + esc([x.suburb, x.postcode].filter(Boolean).join(" ")) + "</span></button>";
+      }).join("") + "<div class='sugg-foot'>Can't see it? Keep typing, or enter it yourself." + ((window.SITE || {}).geoapifyKey ? " · <a href='https://www.geoapify.com/' target='_blank' rel='noopener'>Powered by Geoapify</a>" : "") + "</div>");
+    }
+    function search() {
+      var q = ad.value.trim(), my = ++seq;
+      if (q.replace(/^\d+\S*\s+/, "").length < 3) { spin.hidden = true; return close(); }
+      spin.hidden = false;
+      DV.streets(q).then(function (res) { if (my !== seq) return; spin.hidden = true; if (document.activeElement === ad) render(res, q); });
     }
     function pick(x) {
-      // Street-only suggestion: keep the house/unit number already typed (e.g. "12", "3/45", "Unit 2, 14")
-      var typed = ad.value.trim(), num = "";
-      var m = typed.match(/^(?:(?:unit|u|lot|shop|suite|level)\b\.?[\s,]*|[^\s,]*\d[^\s,]*[\s,]+)+/i);
-      if (m) num = typed.slice(0, m[0].length).replace(/[\s,]+$/, "");
-      var street = x.street || "";
-      if (!x.exact && num && street && street.toLowerCase().indexOf(num.toLowerCase()) !== 0) street = num + " " + street;
-      ad.value = street || ad.value;
-      if (x.suburb) document.getElementById("sb").value = x.suburb;
-      if (x.postcode) document.getElementById("pc").value = x.postcode;
-      draft.address = ad.value; draft.suburb = document.getElementById("sb").value; draft.postcode = document.getElementById("pc").value;
-      loc = { lat: x.lat, lng: x.lng, exact: x.exact };
+      // If they typed the house number into the street box, move it to the number box
+      var lead = ad.value.trim().match(/^((?:unit\s*)?\d+[a-z]?(?:\s*[\/-]\s*\d+[a-z]?)?)\s+/i);
+      if (lead && !hn.value.trim()) hn.value = lead[1];
+      ad.value = x.street;
+      if (x.suburb) sb.value = x.suburb;
+      if (x.postcode) pc.value = x.postcode;
+      [hn, ad, sb, pc].forEach(function (el) { draft[el.name] = el.value; var w = el.closest(".f"); if (w && el.value) w.classList.remove("err"); });
+      draft.address = fields().street;
+      loc = { lat: x.lat, lng: x.lng, exact: false };
       var f = fields(); locKey = [f.street, f.suburb, f.postcode].join("|").toLowerCase(); locating = null;
       saveDraft(); close(); updateDelivery();
-      if (!x.exact && num) {
+      if (!hn.value.trim()) hn.focus();
+      // Quietly try to pin the exact house (used for drawn delivery areas)
+      if (hn.value.trim()) {
         var key = locKey;
-        DV.locate(f.street, f.suburb, f.postcode).then(function (r) {
-          if (r && r.exact && key === locKey) { loc = { lat: r.lat, lng: r.lng, exact: true }; saveDraft(); updateDelivery(); }
-        });
+        DV.locate(f.street, f.suburb, f.postcode).then(function (r) { if (r && r.exact && key === locKey) { loc = { lat: r.lat, lng: r.lng, exact: true }; saveDraft(); } });
       }
     }
-    ad.addEventListener("input", function () {
-      clearTimeout(timer);
-      var q = ad.value.trim();
-      timer = setTimeout(function () { DV.suggest(q).then(function (l) { if (ad.value.trim() === q) show(l); }); }, 300);
-    });
+    ad.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(search, 250); });
+    ad.addEventListener("focus", function () { if (ad.value.trim().length >= 3 && box.hidden && !loc) search(); });
     ad.addEventListener("keydown", function (e) {
       if (box.hidden) return;
       var btns = box.querySelectorAll("button");
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); active = (active + (e.key === "ArrowDown" ? 1 : -1) + btns.length) % btns.length; btns.forEach(function (b, i) { b.classList.toggle("on", i === active); }); }
-      else if (e.key === "Enter" && active > -1) { e.preventDefault(); pick(items[active]); }
-      else if (e.key === "Escape") close();
+      if ((e.key === "ArrowDown" || e.key === "ArrowUp") && btns.length) {
+        e.preventDefault(); active = (active + (e.key === "ArrowDown" ? 1 : -1) + btns.length) % btns.length;
+        btns.forEach(function (b, i) { b.classList.toggle("on", i === active); }); ad.setAttribute("aria-activedescendant", "sg" + active);
+      } else if (e.key === "Enter" && active > -1) { e.preventDefault(); pick(items[active]); }
+      else if (e.key === "Escape" || e.key === "Tab") close();
     });
     box.addEventListener("mousedown", function (e) { var b = e.target.closest("button"); if (b) { e.preventDefault(); pick(items[+b.dataset.i]); } });
     document.addEventListener("click", function (e) { if (!e.target.closest(".addr-wrap")) close(); });
-    ["ad", "sb", "pc"].forEach(function (id) {
-      var el = document.getElementById(id);
-      el.addEventListener("input", function () { if (loc || locating) { loc = null; locating = null; locKey = ""; saveDraft(); } updateDelivery(); });
+    // Typed suburb: fill the postcode when we know it
+    sb.addEventListener("change", function () { if (!pc.value.trim()) { var p = DV.postcodeFor(sb.value); if (p) { pc.value = p; draft.postcode = p; saveDraft(); updateDelivery(); } } });
+    [hn, ad, sb, pc].forEach(function (el) {
+      el.addEventListener("input", function () { if (el !== hn && (loc || locating)) { loc = null; locating = null; locKey = ""; saveDraft(); } updateDelivery(); });
       el.addEventListener("change", function () { setTimeout(lookUp, 150); });
     });
   }
@@ -479,7 +498,9 @@
     var c = load(), sub = total(c), f = fields();
     var d = (f.street || f.suburb) ? DV.match(loc, f.suburb) : null;
     var label = document.getElementById("delivLabel"), fee = document.getElementById("delivFee");
-    if (checking === true || (locating && !loc)) {
+    // Only wait on the map when it could change the answer (drawn areas, or a suburb we don't know)
+    var mapMatters = (d && d.unknown) || DV.zones.some(function (z) { return (z.areas || []).length; });
+    if ((checking === true || (locating && !loc)) && mapMatters) {
       info.innerHTML = "<div class='dcard checking'><span class='spin'></span><div><b>Checking the delivery address…</b></div></div>";
       label.textContent = "Delivery"; fee.textContent = "Checking…"; d = null;
     } else if (!d || !f.suburb) {
@@ -510,7 +531,7 @@
       "<div class='panel'><h3>Check your order</h3>" +
       rev("Delivering to", "<p><b>" + esc(draft.recipient_name) + "</b><br>" + (draft.place_detail ? esc(draft.place_detail) + "<br>" : "") + esc(draft.address) + "<br>" + esc(draft.suburb) + " QLD " + esc(draft.postcode) + "<br>" + esc(draft.recipient_phone) + "</p>") +
       rev("Delivery", "<p>" + esc(nice(draft.delivery_date)) + "<br>" + esc(d.name) + " · " + (d.unknown ? "cost to be confirmed" : d.fee > 0 ? money(d.fee) : "Delivery included") + "</p>") +
-      rev("Card message", "<p>" + (draft.card_message ? esc(draft.card_message).replace(/\n/g, "<br>") : "<span class='muted'>No card message</span>") + (draft.card_message ? "<br><span class='muted'>" + (draft.card_anonymous ? "Sent anonymously" : draft.card_from ? "From: " + esc(draft.card_from) : "") + "</span>" : "") + "</p>") +
+      rev("Card message", "<p>" + (draft.card_message ? esc(draft.card_message).replace(/\n/g, "<br>") : "<span class='muted'>No card message</span>") + (draft.card_message ? "<br><span class='muted'>" + (draft.card_from ? "From: " + esc(draft.card_from) : "") + "</span>" : "") + "</p>") +
       rev("Your details", "<p>" + esc(draft.sender_name) + "<br>" + esc(draft.sender_phone) + "<br>" + esc(draft.email) + (draft.notes ? "<br><span class='muted'>Note: " + esc(draft.notes) + "</span>" : "") + "</p>") +
       "</div>" +
       "<div class='panel'><h3>Payment</h3><div class='paylist'>" + methods.map(function (m) {
@@ -541,7 +562,7 @@
       items: c.map(function (i) { return { name: i.name, opts: i.opts || "", qty: i.qty, price: i.price, extra: !!i.extra, img: i.img }; }),
       delivery: { date: draft.delivery_date, zone: d.name, unknown: !!d.unknown, fee: fee, how: d.how },
       recipient: { name: draft.recipient_name, place: draft.delivery_type || "home", detail: draft.place_detail || "", address: draft.address, suburb: draft.suburb, postcode: draft.postcode, phone: draft.recipient_phone },
-      card: draft.card_message || "", cardFrom: draft.card_anonymous ? "(anonymous)" : (draft.card_from || ""),
+      card: draft.card_message || "", cardFrom: draft.card_from || "",
       sender: { name: draft.sender_name, phone: draft.sender_phone, email: draft.email },
       notes: draft.notes || "",
       payment: method,
@@ -616,7 +637,7 @@
       (o.payment === "card" && S.paymentLink ? "<a class='btn btn-primary' href='" + esc(S.paymentLink) + "' target='_blank' rel='noopener'>Complete payment · " + money(o.total) + "</a>" : "") + "</div>" +
       "<div class='confirm-grid'>" +
       "<div class='panel'><h3>Delivery</h3><p><b>" + esc(o.recipient.name) + "</b><br>" + (o.recipient.detail ? esc(o.recipient.detail) + "<br>" : "") + esc(o.recipient.address) + "<br>" + esc(o.recipient.suburb) + " QLD " + esc(o.recipient.postcode) + "<br>" + esc(o.recipient.phone) + "</p><p>" + esc(nice(o.delivery.date)) + "<br>" + esc(o.delivery.zone) + "</p>" +
-      "<h4 style='margin-top:14px'>Card message</h4><p>" + (o.card ? esc(o.card).replace(/\n/g, "<br>") + (o.cardFrom ? "<br><span class='muted'>" + (o.cardFrom === "(anonymous)" ? "Sent anonymously" : "From: " + esc(o.cardFrom)) + "</span>" : "") : "<span class='muted'>No card message</span>") + "</p></div>" +
+      "<h4 style='margin-top:14px'>Card message</h4><p>" + (o.card ? esc(o.card).replace(/\n/g, "<br>") + (o.cardFrom ? "<br><span class='muted'>" + "From: " + esc(o.cardFrom) + "</span>" : "") : "<span class='muted'>No card message</span>") + "</p></div>" +
       "<div class='panel'><h3>Order details</h3><table class='otable'>" + flowers.map(row).join("") + (extras.length ? "<tr class='sub'><td colspan='2'>Extras</td></tr>" + extras.map(row).join("") : "") +
       "<tr class='tot'><td>Subtotal</td><td>" + money(o.subtotal) + "</td></tr>" +
       "<tr><td>" + (o.delivery.unknown ? "Delivery" : esc(o.delivery.zone)) + "</td><td>" + (o.delivery.unknown ? "To be confirmed" : o.delivery.fee > 0 ? money(o.delivery.fee) : "Included") + "</td></tr>" +
