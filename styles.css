@@ -361,3 +361,10 @@ html,body{overflow-x:hidden}
 .deliv-courier{background:#e9f0f7;border-color:#3b6ea5}
 .deliv-unknown{background:#fbeee6;border-color:#c46a2b}
 .zone-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}
+/* Address suggestions at checkout */
+.addr-wrap{position:relative}
+.addr-sugg{position:absolute;left:0;right:0;top:74px;z-index:20;background:#fff;border:1.5px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.addr-sugg button{display:block;width:100%;text-align:left;border:0;background:#fff;padding:11px 14px;font:inherit;font-size:.9rem;cursor:pointer;border-bottom:1px solid var(--line);color:var(--ink)}
+.addr-sugg button:last-child{border-bottom:0}
+.addr-sugg button:hover,.addr-sugg button.on{background:var(--cream)}
+.deliv-checking{background:#f2f2ee;border-color:#b9b9ae}

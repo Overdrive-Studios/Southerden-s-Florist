@@ -16,12 +16,10 @@ Static site (plain HTML/CSS/JS, no build step). Open `index.html` or host the fo
 - `styles.css`, `cart.js`, `config.js`
 
 ## Delivery areas and fees
-Everything lives in `delivery-zones.js`. It drives both the fee at checkout and the area lists on the Delivery page.
 
-- **Zones** are checked top to bottom: the suburb name first, then the postcode. The first match sets the fee.
-- `type`: `free`, `extra` (own driver, fee added) or `courier` (handed to a courier, fee added).
-- `fee`: dollars added to the order, e.g. `15`.
-- `sameDay: false` stops same-day bookings for that zone (earliest date becomes the next business day).
-- `suburbs` / `postcodes`: add areas here. Capitals don't matter. A postcode covers every suburb in it.
-- Any address that matches no zone can still be ordered, and is flagged **"delivery cost to be confirmed"** in the order email so the shop can call.
-- Add more zones (e.g. a $10 band and a $20 band) by copying a zone block and giving it a new `id`.
+- At checkout the street address is looked up on the map (OpenStreetMap, free, no key), with address suggestions as the customer types.
+- Zones are checked top to bottom. A zone matches if the address is inside one of its drawn `areas`, or within `maxKm` of the shop (straight line from Highfields).
+- If the address can't be found on the map, the suburb name is matched against each zone's `suburbs` list instead (also used until map areas are set up).
+- No match: the order still goes through, flagged **"delivery cost to be confirmed"**.
+- The order email includes the zone, fee, how it was matched, the distance from the shop and a Google Maps link.
+- `sameDay: false` makes the earliest delivery date the next business day (for courier zones).

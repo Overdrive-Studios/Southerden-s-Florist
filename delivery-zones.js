@@ -1,14 +1,23 @@
 // ==== Southerden's delivery zones ====
-// This one file controls delivery fees at checkout AND the area lists on the Delivery page.
+// Controls delivery fees at checkout, the area lists on the Delivery page,
 //
-// How it works: at checkout the customer enters a suburb/town and postcode.
-// The site looks for the suburb in each zone below (top to bottom), then the postcode.
-// The first match decides the delivery fee. If nothing matches, the order can still be
-// placed and is flagged "delivery cost to be confirmed" so the shop can call them.
+// HOW AN ADDRESS IS MATCHED
+// 1. The customer's street address is looked up on the map to get its exact location.
+// 2. Zones are checked top to bottom. A zone matches if the location is inside one of its
+//    drawn "areas", or within "maxKm" of the shop (straight-line distance).
+// 3. If the address can't be found on the map, the suburb name is checked against "suburbs".
+// 4. If nothing matches, the order still goes through, flagged "delivery cost to be confirmed".
 //
-// To add an area: put its name in a zone's "suburbs" list (spelling doesn't need
-// capitals). To cover every suburb in a postcode at once, add the postcode to "postcodes".
 // type: "free" = no charge, "extra" = our own driver with a fee, "courier" = handed to a courier.
+// sameDay: false = earliest delivery date is the next business day.
+// areas: list of shapes, each a list of [latitude, longitude] corner points.
+
+window.DELIVERY_SHOP = {
+  name: "Southerden's Florist",
+  address: "Highfields QLD",
+  lat: -27.4494276,
+  lng: 151.9453192
+};
 
 window.DELIVERY_ZONES = [
   {
@@ -16,36 +25,40 @@ window.DELIVERY_ZONES = [
     name: "Toowoomba local delivery",
     type: "free",
     fee: 0,
-    note: "Same-day delivery when ordered by 2pm Monday to Friday.",
     sameDay: true,
-    // Areas listed on the old website. Postcode 4350 covers all Toowoomba suburbs.
+    note: "Same-day delivery when ordered by 2pm Monday to Friday.",
+    maxKm: 0,          // e.g. 20 -> anywhere within 20 km of the shop
+    areas: [],
+    // Used only when an address can't be found on the map.
     suburbs: [
-      "Toowoomba", "Highfields", "Middle Ridge", "Rangeville", "Centenary Heights",
+      "Toowoomba", "Toowoomba City", "East Toowoomba", "North Toowoomba", "South Toowoomba",
+      "Highfields", "Middle Ridge", "Rangeville", "Centenary Heights",
       "Darling Heights", "Glenvale", "Newtown", "Wilsonton", "Kingsthorpe",
       "Gowrie Junction", "Hodgsonvale", "Withcott", "Mount Lofty", "Top Camp",
       "Preston", "Ramsay", "Geham", "Cabarlah", "Glencoe", "Meringandan", "Oakey"
-    ],
-    postcodes: ["4350"]
+    ]
   },
   {
     id: "extra",
     name: "Outer area delivery",
     type: "extra",
     fee: 0,            // e.g. 15  ->  $15.00 added to the order
-    note: "Delivered by our own driver. Same-day when ordered by 2pm Monday to Friday.",
     sameDay: true,
-    suburbs: [],       // e.g. "Crows Nest", "Pittsworth"
-    postcodes: []      // e.g. "4355"
+    note: "Delivered by our own driver. Same-day when ordered by 2pm Monday to Friday.",
+    maxKm: 0,
+    areas: [],
+    suburbs: []
   },
   {
     id: "courier",
     name: "Courier delivery",
     type: "courier",
     fee: 0,            // e.g. 30
+    sameDay: false,
     note: "Handed to a courier partner. Usually delivered the next business day.",
-    sameDay: false,    // false = earliest delivery date is the next business day
-    suburbs: [],       // e.g. "Dalby", "Warwick"
-    postcodes: []
+    maxKm: 0,
+    areas: [],
+    suburbs: []
   }
 ];
 

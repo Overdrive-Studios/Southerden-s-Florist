@@ -71,22 +71,13 @@
   }
   function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 
-  // ---- Delivery zones (settings live in delivery-zones.js) ----
-  var ZONES = window.DELIVERY_ZONES || [];
-  var UNKNOWN = window.DELIVERY_UNKNOWN || { name: "Outside our listed areas", note: "We'll call you to confirm delivery options and any cost." };
-  function norm(t) { return String(t || "").toLowerCase().replace(/\bmt\b\.?/g, "mount").replace(/[^a-z0-9]+/g, " ").trim(); }
-  function deliveryFor(suburb, postcode) {
-    var s = norm(suburb), pc = String(postcode || "").replace(/\D/g, "");
-    if (!s && pc.length < 4) return null;
-    var z;
-    if (s) z = ZONES.find(function (z) { return (z.suburbs || []).some(function (x) { return norm(x) === s; }); });
-    if (!z && pc.length === 4) z = ZONES.find(function (z) { return (z.postcodes || []).indexOf(pc) > -1; });
-    if (!z) return (s && pc.length === 4) ? { unknown: true, name: UNKNOWN.name, note: UNKNOWN.note, fee: 0 } : null;
-    return { id: z.id, type: z.type, name: z.name, note: z.note, fee: +z.fee || 0, sameDay: z.sameDay !== false };
-  }
+  // ---- Delivery (zones in delivery-zones.js, matching in delivery-engine.js) ----
+  var DV = window.Delivery;
+  var UNKNOWN = window.DELIVERY_UNKNOWN || { name: "Outside our listed areas" };
+  var loc = null, locating = null, locKey = "";
   function nextBusinessDay(d) { var n = new Date(d); n.setDate(n.getDate() + 1); while (n.getDay() === 0 || n.getDay() === 6) n.setDate(n.getDate() + 1); return n; }
   var allSuburbs = [];
-  ZONES.forEach(function (z) { (z.suburbs || []).forEach(function (x) { if (allSuburbs.indexOf(x) < 0) allSuburbs.push(x); }); });
+  (window.DELIVERY_ZONES || []).forEach(function (z) { (z.suburbs || []).forEach(function (x) { if (allSuburbs.indexOf(x) < 0) allSuburbs.push(x); }); });
   allSuburbs.sort();
 
   function render() {
@@ -112,7 +103,7 @@
       "<fieldset><legend>Delivery</legend><div class='fields'>" +
       "<div><label for='dd'>Delivery date</label><input id='dd' type='date' name='delivery_date' required min='" + iso(e) + "' value='" + iso(e) + "'><div class='hint'>Same day if ordered by 2pm Mon–Fri. For Saturday, please call.</div></div>" +
       "<div><label for='rn'>Recipient's name</label><input id='rn' name='recipient_name' required></div>" +
-      "<div class='full'><label for='ad'>Delivery address</label><input id='ad' name='address' required placeholder='Street address, unit, or hospital ward and room'></div>" +
+      "<div class='full addr-wrap'><label for='ad'>Delivery address</label><input id='ad' name='address' required autocomplete='off' placeholder='Start typing the street address'><div class='addr-sugg' id='addrSugg' role='listbox' hidden></div><div class='hint'>Pick the address from the list if it appears. Add a unit, ward or room number in the notes below.</div></div>" +
       "<div><label for='sb'>Suburb / town</label><input id='sb' name='suburb' required list='suburbList' autocomplete='off'><datalist id='suburbList'>" + allSuburbs.map(function (x) { return "<option value='" + esc(x) + "'>"; }).join("") + "</datalist></div>" +
       "<div><label for='pc'>Postcode</label><input id='pc' name='postcode' required inputmode='numeric' pattern='[0-9]{4}' maxlength='4' placeholder='4350'></div>" +
       "<div class='full' id='delivInfo' aria-live='polite'></div>" +
@@ -128,25 +119,87 @@
       "<button class='btn btn-primary' style='width:100%;justify-content:center' type='submit' id='placeBtn'>" + (S.paymentLink ? "Continue to payment" : "Place order") + " · " + money(total(c)) + "</button>" +
       "<p class='hint' style='text-align:center;margin-top:10px'>" + (S.paymentLink ? "You'll be taken to our secure payment page." : "We'll call you to confirm your order and take payment.") + " By placing your order you agree to our <a href='" + root + "terms.html'>Terms &amp; Conditions</a>.</p>" +
       "</form></div><aside class='panel summary'><h3>Order summary</h3>" + lines +
-      "<div class='totals'><div><span>Subtotal</span><span>" + money(total(c)) + "</span></div><div><span id='delivLabel'>Delivery</span><span id='delivFee'>Enter suburb</span></div><div class='grand'><span>Total incl. GST</span><span id='grandTotal'>" + money(total(c)) + "</span></div></div>" +
-      "<p class='hint' style='margin-top:12px'>Delivery is free within Toowoomba. Some outer areas have a delivery fee, which is shown here once you enter the suburb and postcode.</p></aside></div>";
+      "<div class='totals'><div><span>Subtotal</span><span>" + money(total(c)) + "</span></div><div><span id='delivLabel'>Delivery</span><span id='delivFee'>Enter address</span></div><div class='grand'><span>Total incl. GST</span><span id='grandTotal'>" + money(total(c)) + "</span></div></div>" +
+      "<p class='hint' style='margin-top:12px'>Delivery is free within Toowoomba. Some outer areas have a delivery fee, which is shown here once you enter the delivery address.</p></aside></div>";
     var form = document.getElementById("orderForm");
     form.addEventListener("submit", submit);
     Object.keys(draft).forEach(function (k) { if (form.elements[k] && draft[k]) form.elements[k].value = draft[k]; });
     form.addEventListener("input", function (ev) { if (ev.target.name) draft[ev.target.name] = ev.target.value; });
-    ["sb", "pc"].forEach(function (id) { var el = document.getElementById(id); el.addEventListener("input", updateDelivery); el.addEventListener("change", updateDelivery); });
+    setupAddress();
+    if (draft._loc) loc = draft._loc;
     updateDelivery();
+    if (!loc) lookUp();
     setupScroller();
   }
   var draft = {};
 
-  function updateDelivery() {
+  function fields() { return { street: document.getElementById("ad").value.trim(), suburb: document.getElementById("sb").value.trim(), postcode: document.getElementById("pc").value.trim() }; }
+
+  // Look the typed address up on the map (once they've filled street + suburb)
+  function lookUp() {
+    var f = fields(), key = [f.street, f.suburb, f.postcode].join("|").toLowerCase();
+    if (!f.street || !f.suburb || key === locKey) return locating || Promise.resolve(loc);
+    locKey = key; loc = null; draft._loc = null; updateDelivery(true);
+    var p = locating = DV.locate(f.street, f.suburb, f.postcode).then(function (r) {
+      if (p !== locating) return loc;          // a newer lookup has started
+      locating = null;
+      if (r) { loc = { lat: r.lat, lng: r.lng, exact: r.exact }; draft._loc = loc; }
+      updateDelivery();
+      return loc;
+    });
+    return p;
+  }
+
+  function setupAddress() {
+    var ad = document.getElementById("ad"), box = document.getElementById("addrSugg"), timer, items = [], active = -1;
+    function close() { box.hidden = true; active = -1; }
+    function show(list) {
+      items = list;
+      if (!list.length) return close();
+      box.innerHTML = list.map(function (x, i) { return "<button type='button' role='option' data-i='" + i + "'>" + esc(x.label) + "</button>"; }).join("");
+      box.hidden = false;
+    }
+    function pick(x) {
+      ad.value = x.street || ad.value;
+      if (x.suburb) document.getElementById("sb").value = x.suburb;
+      if (x.postcode) document.getElementById("pc").value = x.postcode;
+      ["address", "suburb", "postcode"].forEach(function (n) { draft[n] = document.getElementById({ address: "ad", suburb: "sb", postcode: "pc" }[n]).value; });
+      loc = { lat: x.lat, lng: x.lng, exact: x.exact }; draft._loc = loc;
+      locKey = [fields().street, fields().suburb, fields().postcode].join("|").toLowerCase(); locating = null;
+      close(); updateDelivery();
+    }
+    ad.addEventListener("input", function () {
+      clearTimeout(timer);
+      var q = ad.value.trim();
+      timer = setTimeout(function () { DV.suggest(q).then(function (l) { if (ad.value.trim() === q) show(l); }); }, 300);
+    });
+    ad.addEventListener("keydown", function (e) {
+      if (box.hidden) return;
+      var btns = box.querySelectorAll("button");
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); active = (active + (e.key === "ArrowDown" ? 1 : -1) + btns.length) % btns.length; btns.forEach(function (b, i) { b.classList.toggle("on", i === active); }); }
+      else if (e.key === "Enter" && active > -1) { e.preventDefault(); pick(items[active]); }
+      else if (e.key === "Escape") close();
+    });
+    box.addEventListener("mousedown", function (e) { var b = e.target.closest("button"); if (b) { e.preventDefault(); pick(items[+b.dataset.i]); } });
+    document.addEventListener("click", function (e) { if (!e.target.closest(".addr-wrap")) close(); });
+    ["ad", "sb", "pc"].forEach(function (id) {
+      var el = document.getElementById(id);
+      el.addEventListener("input", function () { if (loc || locating) { loc = null; draft._loc = null; locating = null; locKey = ""; } updateDelivery(); });
+      el.addEventListener("change", function () { setTimeout(lookUp, 150); });
+    });
+  }
+
+  function updateDelivery(checking) {
     var c = load(), sub = total(c);
-    var d = deliveryFor(document.getElementById("sb").value, document.getElementById("pc").value);
+    var f = fields();
+    var d = (f.street || f.suburb) ? DV.match(loc, f.suburb) : null;
     var info = document.getElementById("delivInfo"), label = document.getElementById("delivLabel"), fee = document.getElementById("delivFee");
     var dateEl = document.getElementById("dd"), base = earliest();
     var feeTxt, cls, msg;
-    if (!d) { info.innerHTML = ""; label.textContent = "Delivery"; fee.textContent = "Enter suburb"; }
+    if (checking === true || (locating && !loc)) {
+      info.innerHTML = "<div class='deliv deliv-checking'><b>Checking the delivery address…</b></div>";
+      label.textContent = "Delivery"; fee.textContent = "Checking…"; d = null;
+    } else if (!d || !f.suburb) { info.innerHTML = ""; label.textContent = "Delivery"; fee.textContent = "Enter address"; d = null; }
     else {
       if (d.unknown) { cls = "unknown"; feeTxt = "To be confirmed"; }
       else if (d.fee > 0) { cls = d.type; feeTxt = money(d.fee); }
@@ -204,12 +257,20 @@
 
   function submit(ev) {
     ev.preventDefault();
-    var f = ev.target, c = load(), data = {};
+    var form = ev.target, btn0 = form.querySelector("button[type=submit]");
+    btn0.disabled = true;
+    Promise.resolve(lookUp()).then(function () { btn0.disabled = false; send(form); });
+  }
+
+  function send(f) {
+    var c = load(), data = {};
     if (!c.some(function (i) { return !i.extra; })) { render(); return; }
     new FormData(f).forEach(function (v, k) { data[k] = v; });
     data.items = c.map(function (i) { return i.qty + " x " + i.name + " (" + money(i.price * i.qty) + ")"; }).join("\n");
-    var d = deliveryFor(data.suburb, data.postcode) || { unknown: true, name: UNKNOWN.name, fee: 0 };
-    data.delivery = d.unknown ? "TO BE CONFIRMED: " + data.suburb + " " + data.postcode + " is not in a listed delivery area" : d.name + " (" + (d.fee > 0 ? money(d.fee) : "free") + ")";
+    var d = DV.match(loc, data.suburb) || { unknown: true, name: UNKNOWN.name, fee: 0 };
+    data.delivery = d.unknown ? "TO BE CONFIRMED: " + data.address + ", " + data.suburb + " " + data.postcode + " is not in a listed delivery area" : d.name + " (" + (d.fee > 0 ? money(d.fee) : "free") + ")";
+    data.delivery_matched_by = loc ? (loc.exact ? "exact address on the map" : "street on the map") + (d.km != null ? ", " + d.km.toFixed(1) + " km from the shop" : "") : "suburb name only (address not found on the map, please check)";
+    if (loc) data.delivery_map = "https://www.google.com/maps/search/?api=1&query=" + loc.lat.toFixed(6) + "," + loc.lng.toFixed(6);
     data.delivery_fee = d.unknown ? "To be confirmed" : money(d.fee);
     data.subtotal = money(total(c));
     data.total = money(total(c) + (d.unknown ? 0 : d.fee)) + (d.unknown ? " + delivery (to be confirmed)" : "");
