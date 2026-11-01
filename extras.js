@@ -5,8 +5,9 @@ window.EXTRAS = [
     id: "x-balloon", name: "Helium balloon", img: "helium_balloons_000.jpg",
     desc: "A large foil helium balloon, $25 each.",
     pick: { label: "Message", choices: [
-      ["Congratulations", 25], ["Get well", 25], ["Happy anniversary", 25], ["Happy birthday", 25],
-      ["I love you", 25], ["It's a boy", 25], ["It's a girl", 25], ["Smiley face", 25], ["Thinking of you", 25]
+      ["Happy birthday", 25], ["18th birthday", 25], ["21st birthday", 25], ["40th birthday", 25],
+      ["Happy anniversary", 25], ["Congratulations", 25], ["Get well", 25], ["Thinking of you", 25],
+      ["I love you", 25], ["Valentine's Day", 25], ["It's a boy", 25], ["It's a girl", 25], ["Smiley face", 25]
     ] }
   },
   {
