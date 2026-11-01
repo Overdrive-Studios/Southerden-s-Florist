@@ -281,7 +281,7 @@
       sec(4, "card", "Card message", "Optional. We'll handwrite it on a card with the flowers.",
         "<div class='chips idea-chips'>" + CARD_IDEAS.map(function (t) { return "<button type='button' class='chip-btn' data-idea='" + esc(t) + "'>" + esc(t) + "</button>"; }).join("") + "</div>" +
         "<div class='f full'><label for='cm'>Message</label><textarea id='cm' name='card_message' rows='3' maxlength='250' placeholder='Write your message, or tap an idea above'></textarea><span class='count' id='cmCount'>0 / 250</span></div>" +
-        "<div class='fields'><div class='f full'><label for='cf'>From <em>(optional)</em></label><input id='cf' name='card_from' autocomplete='off' placeholder='e.g. Love, Sam and the kids'></div></div>") +
+        "<div class='fields'><div class='f full'><label for='cf'>From</label><input id='cf' name='card_from' autocomplete='off' placeholder='e.g. Love, Sam and the kids'></div></div>") +
       sec(5, "you", "Your details", "So we can confirm your order and contact you if needed.",
         "<div class='fields'>" + fld("sn", "sender_name", "Your name", "required autocomplete='name'") +
         fld("sp", "sender_phone", "Your phone", "type='tel' required autocomplete='tel' inputmode='tel'") +
