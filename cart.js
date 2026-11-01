@@ -118,14 +118,14 @@
     var lines = c.map(function (i) {
       return "<div class='sline'><span class='art'><img src='" + root + "images/" + esc(i.img) + "' alt='' onerror='this.remove()'></span><span>" + esc(i.name) + (i.qty > 1 ? " <small>× " + i.qty + "</small>" : "") + "</span><b>" + money(i.price * i.qty) + "</b></div>";
     }).join("");
-    var feeTxt = !d ? (opts.step === "cart" ? "Calculated next" : "Enter address") : d.unknown ? "To be confirmed" : d.fee > 0 ? money(d.fee) : "Free";
+    var feeTxt = !d ? (opts.step === "cart" ? "Calculated next" : "Enter address") : d.unknown ? "To be confirmed" : d.fee > 0 ? money(d.fee) : "Included";
     var grand = sub + (d && !d.unknown ? d.fee : 0);
     return "<aside class='panel summary'><h3>Order summary</h3>" + (opts.step === "cart" ? "" : lines) +
       "<div class='totals'><div><span>Subtotal</span><span>" + money(sub) + "</span></div>" +
       "<div><span id='delivLabel'>" + (d && !d.unknown ? esc(d.name) : "Delivery") + "</span><span id='delivFee'>" + feeTxt + "</span></div>" +
       "<div class='grand'><span>Total incl. GST</span><span id='grandTotal'>" + money(grand) + (d && d.unknown ? " + delivery" : "") + "</span></div></div>" +
       (opts.button || "") +
-      "<p class='hint' style='margin-top:12px'>Delivery is free within Toowoomba. Some outer areas have a delivery fee, shown once you enter the delivery address.</p></aside>";
+      "<p class='hint' style='margin-top:12px'>Delivery is included in the Toowoomba area. Some outer areas have a delivery fee, shown once you enter the delivery address.</p></aside>";
   }
 
   // ---- STEP 1: Cart ----
@@ -267,9 +267,9 @@
     } else if (!d || !f.suburb) { info.innerHTML = ""; label.textContent = "Delivery"; fee.textContent = "Enter address"; d = null; }
     else {
       var cls = d.unknown ? "unknown" : d.fee > 0 ? d.type : "free";
-      info.innerHTML = "<div class='deliv deliv-" + cls + "'><b>" + esc(d.name) + (d.unknown ? "" : (d.fee > 0 ? " · " + money(d.fee) : " · Free")) + "</b><span>" + esc(d.note || "") + "</span></div>";
+      info.innerHTML = "<div class='deliv deliv-" + cls + "'><b>" + esc(d.name) + (d.unknown ? "" : (d.fee > 0 ? " · " + money(d.fee) : " · Delivery included")) + "</b><span>" + esc(d.note || "") + "</span></div>";
       label.textContent = d.unknown ? "Delivery" : d.name;
-      fee.textContent = d.unknown ? "To be confirmed" : d.fee > 0 ? money(d.fee) : "Free";
+      fee.textContent = d.unknown ? "To be confirmed" : d.fee > 0 ? money(d.fee) : "Included";
     }
     var min = (d && d.sameDay === false) ? nextBusinessDay(base) : base;   // courier zones can't be same-day
     dateEl.min = iso(min);
@@ -287,7 +287,7 @@
     app.innerHTML = stepper(2) + "<div class='checkout'><div class='checkout-main'><form class='order' id='payForm'>" +
       "<div class='panel'><h3>Check your order</h3>" +
       rev("Delivering to", "<p><b>" + esc(draft.recipient_name) + "</b><br>" + esc(draft.address) + "<br>" + esc(draft.suburb) + " QLD " + esc(draft.postcode) + "<br>" + esc(draft.recipient_phone) + "</p>") +
-      rev("Delivery", "<p>" + esc(nice(draft.delivery_date)) + "<br>" + esc(d.name) + " · " + (d.unknown ? "cost to be confirmed" : d.fee > 0 ? money(d.fee) : "Free") + "</p>") +
+      rev("Delivery", "<p>" + esc(nice(draft.delivery_date)) + "<br>" + esc(d.name) + " · " + (d.unknown ? "cost to be confirmed" : d.fee > 0 ? money(d.fee) : "Delivery included") + "</p>") +
       rev("Card message", "<p>" + (draft.card_message ? esc(draft.card_message).replace(/\n/g, "<br>") : "<span class='muted'>No card message</span>") + "</p>") +
       rev("Your details", "<p>" + esc(draft.sender_name) + "<br>" + esc(draft.sender_phone) + "<br>" + esc(draft.email) + (draft.notes ? "<br><span class='muted'>Note: " + esc(draft.notes) + "</span>" : "") + "</p>") +
       "</div>" +
@@ -338,7 +338,7 @@
       card_message: order.card || "(none)",
       items: order.items.filter(function (i) { return !i.extra; }).map(function (i) { return i.qty + " x " + i.name + " (" + money(i.price * i.qty) + ")"; }).join("\n"),
       extras: order.items.filter(function (i) { return i.extra; }).map(function (i) { return i.qty + " x " + i.name + " (" + money(i.price * i.qty) + ")"; }).join("\n") || "(none)",
-      delivery: d.unknown ? "TO BE CONFIRMED: not in a listed delivery area" : d.name + " (" + (fee > 0 ? money(fee) : "free") + ")",
+      delivery: d.unknown ? "TO BE CONFIRMED: not in a listed delivery area" : d.name + " (" + (fee > 0 ? money(fee) : "delivery included") + ")",
       delivery_matched_by: d.how === "area" ? "address is inside the " + d.name + " area on the map" : d.how === "suburb" ? "suburb name (" + order.recipient.suburb + ")" + (loc ? "" : ", address not found on the map") : "no match, please check",
       subtotal: money(sub),
       total: money(grand) + (d.unknown ? " + delivery (to be confirmed)" : ""),
@@ -389,7 +389,7 @@
       "<h4 style='margin-top:14px'>Card message</h4><p>" + (o.card ? esc(o.card).replace(/\n/g, "<br>") : "<span class='muted'>No card message</span>") + "</p></div>" +
       "<div class='panel'><h3>Order details</h3><table class='otable'>" + flowers.map(row).join("") + (extras.length ? "<tr class='sub'><td colspan='2'>Extras</td></tr>" + extras.map(row).join("") : "") +
       "<tr class='tot'><td>Subtotal</td><td>" + money(o.subtotal) + "</td></tr>" +
-      "<tr><td>" + (o.delivery.unknown ? "Delivery" : esc(o.delivery.zone)) + "</td><td>" + (o.delivery.unknown ? "To be confirmed" : o.delivery.fee > 0 ? money(o.delivery.fee) : "Free") + "</td></tr>" +
+      "<tr><td>" + (o.delivery.unknown ? "Delivery" : esc(o.delivery.zone)) + "</td><td>" + (o.delivery.unknown ? "To be confirmed" : o.delivery.fee > 0 ? money(o.delivery.fee) : "Included") + "</td></tr>" +
       "<tr class='grand'><td>Total</td><td>" + money(o.total) + (o.delivery.unknown ? " + delivery" : "") + "</td></tr>" +
       "<tr class='gst'><td>Includes GST of</td><td>" + money(o.gst) + "</td></tr></table>" +
       "<p class='muted' style='margin-top:12px'>Payment: " + (o.payment === "card" ? "online by card" : "over the phone") + "<br>Ordered by " + esc(o.sender.name) + " · " + esc(o.sender.email) + "</p></div>" +

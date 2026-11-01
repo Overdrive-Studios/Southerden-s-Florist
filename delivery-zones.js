@@ -6,10 +6,10 @@
 // 2. If that location is inside a drawn "area" of a zone, that zone's fee applies
 //    (zones are checked top to bottom, so put the more specific ones first).
 // 3. Otherwise the suburb name is checked against each zone's "suburbs" list.
-//    Everything in Toowoomba is in the free zone this way.
+//    Everything in Toowoomba is in the delivery-included zone this way.
 // 4. If nothing matches, the order still goes through, flagged "delivery cost to be confirmed".
 //
-// type: "free" = no charge, "extra" = our own driver with a fee, "courier" = handed to a courier.
+// type: "free" = delivery included (no charge), "extra" = our own driver with a fee, "courier" = handed to a courier.
 // sameDay: false = earliest delivery date is the next business day.
 // areas: list of shapes, each a list of [latitude, longitude] corner points.
 
@@ -23,7 +23,7 @@ window.DELIVERY_ZONES = [
     sameDay: true,
     note: "Same-day delivery when ordered by 2pm Monday to Friday.",
     areas: [],
-    // Any address in these suburbs is free, unless it falls inside a drawn fee area.
+    // Any address in these suburbs has delivery included, unless it falls inside a drawn fee area.
     suburbs: [
       "Toowoomba", "Toowoomba City", "East Toowoomba", "North Toowoomba", "South Toowoomba",
       "Highfields", "Middle Ridge", "Rangeville", "Centenary Heights",

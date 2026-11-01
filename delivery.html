@@ -35,7 +35,7 @@
     <div class="facts">
       <div class="fact"><b>2pm</b><span>Order cut-off for same-day local delivery, Mon–Fri</span></div>
       <div class="fact"><b>2 runs</b><span>Deliveries each day around Toowoomba, Mon–Fri</span></div>
-      <div class="fact"><b>Free</b><span>No extra charge for deliveries in Toowoomba</span></div>
+      <div class="fact"><b>Included</b><span>Delivery included in the Toowoomba area</span></div>
       <div class="fact"><b>Saturday</b><span>By prior arrangement</span></div>
     </div>
     <p>We deliver to homes, workplaces, nursing homes and hospitals including Toowoomba Hospital, St Andrew's and St Vincent's.</p>
@@ -88,7 +88,7 @@
   var paid = Z.filter(function (z) { return z.type !== "free" && ((z.suburbs || []).length || (z.postcodes || []).length); });
   if (paid.length) {
     document.getElementById("zoneGrid").innerHTML = paid.map(function (z) {
-      return "<div class='panel'><span class='eyebrow'>" + (z.type === "courier" ? "Courier" : "Our own driver") + "</span><h3 style='margin-top:6px'>" + z.name + " · " + (z.fee > 0 ? "$" + (+z.fee).toFixed(2) : "Free") + "</h3><p>" + (z.note || "") + "</p><div class='suburbs'>" + chips((z.suburbs || []).slice().sort()) + (z.postcodes && z.postcodes.length ? "<span>Postcodes " + z.postcodes.join(", ") + "</span>" : "") + "</div></div>";
+      return "<div class='panel'><span class='eyebrow'>" + (z.type === "courier" ? "Courier" : "Our own driver") + "</span><h3 style='margin-top:6px'>" + z.name + " · " + (z.fee > 0 ? "$" + (+z.fee).toFixed(2) : "Delivery included") + "</h3><p>" + (z.note || "") + "</p><div class='suburbs'>" + chips((z.suburbs || []).slice().sort()) + (z.postcodes && z.postcodes.length ? "<span>Postcodes " + z.postcodes.join(", ") + "</span>" : "") + "</div></div>";
     }).join("");
     document.getElementById("feeAreas").hidden = false;
   }
