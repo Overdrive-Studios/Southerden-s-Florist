@@ -370,18 +370,19 @@
 
   // Delivery dates as tap-to-pick buttons
   var lastDateKey = "";
+  function isClosed(v) { return (S.closedDates || []).indexOf(v) > -1; }
   function buildDates(d) {
     var base = earliest(d && d.cutoffHour), min = (d && d.sameDay === false) ? nextBusinessDay(base) : base;
     var key = iso(min); var box = document.getElementById("dateChips"); if (!box) return;
     var dd = document.getElementById("dd"), pick = document.getElementById("ddPick"), other = document.getElementById("otherDate");
     pick.min = key;
     if (!dd.value && draft.delivery_date) dd.value = draft.delivery_date;
-    if (dd.value && dd.value < key) dd.value = "";
+    if (dd.value && (dd.value < key || isClosed(dd.value))) dd.value = "";
     if (key === lastDateKey && box.childElementCount) return markDate();
     lastDateKey = key;
     var today = iso(brisNow()), tmr = iso(new Date(brisNow().getTime() + 864e5));
     var days = [], cur = new Date(min);
-    while (days.length < 5) { if (cur.getDay() !== 0 && cur.getDay() !== 6) days.push(new Date(cur)); cur.setDate(cur.getDate() + 1); }
+    while (days.length < 5) { if (cur.getDay() !== 0 && cur.getDay() !== 6 && !isClosed(iso(cur))) days.push(new Date(cur)); cur.setDate(cur.getDate() + 1); }
     box.innerHTML = days.map(function (x) {
       var v = iso(x), tag = v === today ? "Today" : v === tmr ? "Tomorrow" : x.toLocaleDateString("en-AU", { weekday: "short" });
       return "<button type='button' class='date-chip' data-date='" + v + "'><small>" + tag + "</small><b>" + x.getDate() + "</b><span>" + x.toLocaleDateString("en-AU", { month: "short" }) + "</span></button>";
@@ -394,10 +395,11 @@
     pick.onchange = function () {
       var v = pick.value; if (!v) return;
       var p = v.split("-"), wd = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
+      if (isClosed(v)) { pick.value = ""; document.getElementById("ddErr").textContent = "Sorry, we're closed that day (public holiday). Please choose another date."; document.getElementById("ddErr").style.display = "block"; return; }
       if (wd === 0 || wd === 6) { pick.value = ""; document.getElementById("ddErr").textContent = "We deliver Monday to Friday. For Saturday, please call us."; document.getElementById("ddErr").style.display = "block"; return; }
       setDate(v);
     };
-    if (!dd.value) setDate(iso(min)); else markDate();
+    if (!dd.value) setDate(iso(days[0])); else markDate();
   }
   function setDate(v) { var dd = document.getElementById("dd"); dd.value = v; draft.delivery_date = v; saveDraft(); document.getElementById("ddErr").style.display = "none"; markDate(); }
   function markDate() {
@@ -598,7 +600,7 @@
       _subject: "Order " + order.number + " for " + order.recipient.name + " (" + nice(order.delivery.date) + ")",
       _replyto: order.sender.email
     };
-    if (loc) data.delivery_map = "https://www.google.com/maps/search/?api=1&query=" + loc.lat.toFixed(6) + "," + loc.lng.toFixed(6);
+    data.delivery_map = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(data.address + ", Australia");
 
     function finish() {
       sset("sf-last-order", order);
