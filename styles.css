@@ -352,3 +352,12 @@ a.comm:hover{box-shadow:var(--shadow);transform:translateY(-3px)}
 .comm .more{font-weight:600;color:var(--green-2);font-size:.9rem;margin-top:auto;padding-top:6px}
 .menu{gap:15px}.menu a{font-size:.9rem}.nav{gap:14px}
 html,body{overflow-x:hidden}
+/* Delivery fee message at checkout */
+.deliv{border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:2px;font-size:.9rem;border-left:5px solid}
+.deliv b{font-size:.95rem}
+.deliv span{color:var(--muted)}
+.deliv-free{background:#eef5dc;border-color:var(--leaf)}
+.deliv-extra{background:#fbf6dc;border-color:#c9a400}
+.deliv-courier{background:#e9f0f7;border-color:#3b6ea5}
+.deliv-unknown{background:#fbeee6;border-color:#c46a2b}
+.zone-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}

@@ -71,6 +71,24 @@
   }
   function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 
+  // ---- Delivery zones (settings live in delivery-zones.js) ----
+  var ZONES = window.DELIVERY_ZONES || [];
+  var UNKNOWN = window.DELIVERY_UNKNOWN || { name: "Outside our listed areas", note: "We'll call you to confirm delivery options and any cost." };
+  function norm(t) { return String(t || "").toLowerCase().replace(/\bmt\b\.?/g, "mount").replace(/[^a-z0-9]+/g, " ").trim(); }
+  function deliveryFor(suburb, postcode) {
+    var s = norm(suburb), pc = String(postcode || "").replace(/\D/g, "");
+    if (!s && pc.length < 4) return null;
+    var z;
+    if (s) z = ZONES.find(function (z) { return (z.suburbs || []).some(function (x) { return norm(x) === s; }); });
+    if (!z && pc.length === 4) z = ZONES.find(function (z) { return (z.postcodes || []).indexOf(pc) > -1; });
+    if (!z) return (s && pc.length === 4) ? { unknown: true, name: UNKNOWN.name, note: UNKNOWN.note, fee: 0 } : null;
+    return { id: z.id, type: z.type, name: z.name, note: z.note, fee: +z.fee || 0, sameDay: z.sameDay !== false };
+  }
+  function nextBusinessDay(d) { var n = new Date(d); n.setDate(n.getDate() + 1); while (n.getDay() === 0 || n.getDay() === 6) n.setDate(n.getDate() + 1); return n; }
+  var allSuburbs = [];
+  ZONES.forEach(function (z) { (z.suburbs || []).forEach(function (x) { if (allSuburbs.indexOf(x) < 0) allSuburbs.push(x); }); });
+  allSuburbs.sort();
+
   function render() {
     var c = load();
     if (!c.length) {
@@ -95,7 +113,9 @@
       "<div><label for='dd'>Delivery date</label><input id='dd' type='date' name='delivery_date' required min='" + iso(e) + "' value='" + iso(e) + "'><div class='hint'>Same day if ordered by 2pm Mon–Fri. For Saturday, please call.</div></div>" +
       "<div><label for='rn'>Recipient's name</label><input id='rn' name='recipient_name' required></div>" +
       "<div class='full'><label for='ad'>Delivery address</label><input id='ad' name='address' required placeholder='Street address, unit, or hospital ward and room'></div>" +
-      "<div><label for='sb'>Suburb / town</label><input id='sb' name='suburb' required></div>" +
+      "<div><label for='sb'>Suburb / town</label><input id='sb' name='suburb' required list='suburbList' autocomplete='off'><datalist id='suburbList'>" + allSuburbs.map(function (x) { return "<option value='" + esc(x) + "'>"; }).join("") + "</datalist></div>" +
+      "<div><label for='pc'>Postcode</label><input id='pc' name='postcode' required inputmode='numeric' pattern='[0-9]{4}' maxlength='4' placeholder='4350'></div>" +
+      "<div class='full' id='delivInfo' aria-live='polite'></div>" +
       "<div><label for='rp'>Recipient's phone</label><input id='rp' name='recipient_phone' type='tel' required placeholder='So we can reach them for delivery'></div>" +
       "</div></fieldset>" +
       "<fieldset><legend>Card message</legend><textarea name='card_message' rows='3' maxlength='300' aria-label='Card message' placeholder='Happy birthday Mum, love from all of us'></textarea></fieldset>" +
@@ -105,13 +125,45 @@
       "<div class='full'><label for='em'>Your email</label><input id='em' name='email' type='email' required autocomplete='email'></div>" +
       "<div class='full'><label for='nt'>Anything else? (optional)</label><textarea id='nt' name='notes' rows='2' placeholder='Colour preferences, delivery instructions'></textarea></div>" +
       "</div></fieldset>" +
-      "<button class='btn btn-primary' style='width:100%;justify-content:center' type='submit'>" + (S.paymentLink ? "Continue to payment" : "Place order") + " · " + money(total(c)) + "</button>" +
+      "<button class='btn btn-primary' style='width:100%;justify-content:center' type='submit' id='placeBtn'>" + (S.paymentLink ? "Continue to payment" : "Place order") + " · " + money(total(c)) + "</button>" +
       "<p class='hint' style='text-align:center;margin-top:10px'>" + (S.paymentLink ? "You'll be taken to our secure payment page." : "We'll call you to confirm your order and take payment.") + " By placing your order you agree to our <a href='" + root + "terms.html'>Terms &amp; Conditions</a>.</p>" +
       "</form></div><aside class='panel summary'><h3>Order summary</h3>" + lines +
-      "<div class='totals'><div><span>Delivery in Toowoomba</span><span>Included</span></div><div class='grand'><span>Total incl. GST</span><span>" + money(total(c)) + "</span></div></div>" +
-      "<p class='hint' style='margin-top:12px'>Delivering outside Toowoomba? We'll confirm any extra charge before your order goes out.</p></aside></div>";
-    document.getElementById("orderForm").addEventListener("submit", submit);
+      "<div class='totals'><div><span>Subtotal</span><span>" + money(total(c)) + "</span></div><div><span id='delivLabel'>Delivery</span><span id='delivFee'>Enter suburb</span></div><div class='grand'><span>Total incl. GST</span><span id='grandTotal'>" + money(total(c)) + "</span></div></div>" +
+      "<p class='hint' style='margin-top:12px'>Delivery is free within Toowoomba. Some outer areas have a delivery fee, which is shown here once you enter the suburb and postcode.</p></aside></div>";
+    var form = document.getElementById("orderForm");
+    form.addEventListener("submit", submit);
+    Object.keys(draft).forEach(function (k) { if (form.elements[k] && draft[k]) form.elements[k].value = draft[k]; });
+    form.addEventListener("input", function (ev) { if (ev.target.name) draft[ev.target.name] = ev.target.value; });
+    ["sb", "pc"].forEach(function (id) { var el = document.getElementById(id); el.addEventListener("input", updateDelivery); el.addEventListener("change", updateDelivery); });
+    updateDelivery();
     setupScroller();
+  }
+  var draft = {};
+
+  function updateDelivery() {
+    var c = load(), sub = total(c);
+    var d = deliveryFor(document.getElementById("sb").value, document.getElementById("pc").value);
+    var info = document.getElementById("delivInfo"), label = document.getElementById("delivLabel"), fee = document.getElementById("delivFee");
+    var dateEl = document.getElementById("dd"), base = earliest();
+    var feeTxt, cls, msg;
+    if (!d) { info.innerHTML = ""; label.textContent = "Delivery"; fee.textContent = "Enter suburb"; }
+    else {
+      if (d.unknown) { cls = "unknown"; feeTxt = "To be confirmed"; }
+      else if (d.fee > 0) { cls = d.type; feeTxt = money(d.fee); }
+      else { cls = "free"; feeTxt = "Free"; }
+      msg = "<b>" + esc(d.name) + (d.unknown ? "" : (d.fee > 0 ? " · " + money(d.fee) : " · Free")) + "</b><span>" + esc(d.note || "") + "</span>";
+      info.innerHTML = "<div class='deliv deliv-" + cls + "'>" + msg + "</div>";
+      label.textContent = d.unknown ? "Delivery" : d.name;
+      fee.textContent = feeTxt;
+    }
+    // Courier zones can't be same-day
+    var min = (d && d.sameDay === false) ? nextBusinessDay(base) : base;
+    dateEl.min = iso(min);
+    if (dateEl.value && dateEl.value < dateEl.min) dateEl.value = dateEl.min;
+    var grand = sub + (d && !d.unknown ? d.fee : 0);
+    document.getElementById("grandTotal").textContent = money(grand) + (d && d.unknown ? " + delivery" : "");
+    document.getElementById("placeBtn").textContent = (S.paymentLink ? "Continue to payment" : "Place order") + " · " + money(grand);
+    return d;
   }
 
   // Arrows + dots so it's obvious there are more extras to see
@@ -156,7 +208,11 @@
     if (!c.some(function (i) { return !i.extra; })) { render(); return; }
     new FormData(f).forEach(function (v, k) { data[k] = v; });
     data.items = c.map(function (i) { return i.qty + " x " + i.name + " (" + money(i.price * i.qty) + ")"; }).join("\n");
-    data.total = money(total(c));
+    var d = deliveryFor(data.suburb, data.postcode) || { unknown: true, name: UNKNOWN.name, fee: 0 };
+    data.delivery = d.unknown ? "TO BE CONFIRMED: " + data.suburb + " " + data.postcode + " is not in a listed delivery area" : d.name + " (" + (d.fee > 0 ? money(d.fee) : "free") + ")";
+    data.delivery_fee = d.unknown ? "To be confirmed" : money(d.fee);
+    data.subtotal = money(total(c));
+    data.total = money(total(c) + (d.unknown ? 0 : d.fee)) + (d.unknown ? " + delivery (to be confirmed)" : "");
     data._subject = "New web order for " + data.recipient_name + " (" + data.delivery_date + ")";
 
     if (!S.orderEndpoint) {

@@ -39,7 +39,7 @@
       <div class="fact"><b>Saturday</b><span>By prior arrangement</span></div>
     </div>
     <p>We deliver to homes, workplaces, nursing homes and hospitals including Toowoomba Hospital, St Andrew's and St Vincent's.</p>
-    <div class="suburbs"><span>Highfields</span><span>Middle Ridge</span><span>Rangeville</span><span>Centenary Heights</span><span>Darling Heights</span><span>Glenvale</span><span>Newtown</span><span>Wilsonton</span><span>Kingsthorpe</span><span>Gowrie Junction</span><span>Hodgsonvale</span><span>Withcott</span><span>Mount Lofty</span><span>Top Camp</span><span>Preston</span><span>Ramsay</span><span>Geham</span><span>Cabarlah</span><span>Glencoe</span><span>Meringandan</span><span>Oakey</span><span>…and beyond</span></div>
+    <div class="suburbs" id="freeAreas"></div>
   </div>
   <div class="panel"><h3>Good to know</h3>
     <ul class="terms" style="list-style:disc">
@@ -47,13 +47,14 @@
       <li>We make 2 delivery runs a day around Toowoomba, Monday to Friday.</li>
       <li>Saturday deliveries are by prior arrangement. Please call us.</li>
       <li>Timed deliveries need to be ordered at least 2 hours before the time you'd like. We'll do our best, but times can't be guaranteed.</li>
-      <li>Delivery within Toowoomba is included in our prices. For out-of-town deliveries, give us a call.</li>
+      <li>Delivery within Toowoomba is included in our prices. Some outer areas have a delivery fee, and checkout shows it once you enter the suburb and postcode.</li>
       <li>Our shop hours are Monday to Friday, 9am to 3pm.</li>
     </ul>
     <p style="margin-top:18px">Please read our <a href="terms.html">Terms &amp; Conditions</a> for full details on pricing, substitutions and our quality guarantee.</p>
     <div class="hero-actions"><a class="btn btn-primary" href="tel:0746383622">Call 07 4638 3622</a><a class="btn btn-ghost" href="terms.html">Terms &amp; Conditions</a></div>
   </div>
 </div></section>
+<section style="padding-top:0" id="feeAreas" hidden><div class="wrap"><div class="sec-head"><div><span class="eyebrow">Further afield</span><h2>Outer areas &amp; courier delivery</h2></div><p>Not listed? Give us a call and we'll work something out.</p></div><div class="zone-grid" id="zoneGrid"></div></div></section>
 </main>
 <footer>
   <div class="wrap">
@@ -74,6 +75,23 @@
 </footer>
 <script src="config.js"></script>
 <script src="extras.js"></script>
+<script src="delivery-zones.js"></script>
 <script src="cart.js"></script>
+<script>
+(function () {
+  var Z = window.DELIVERY_ZONES || [];
+  function chips(list) { return list.map(function (s) { return "<span>" + s + "</span>"; }).join(""); }
+  var free = Z.filter(function (z) { return z.type === "free"; });
+  var names = []; free.forEach(function (z) { names = names.concat(z.suburbs || []); });
+  document.getElementById("freeAreas").innerHTML = chips(names.sort()) + "<span>…and all Toowoomba suburbs</span>";
+  var paid = Z.filter(function (z) { return z.type !== "free" && ((z.suburbs || []).length || (z.postcodes || []).length); });
+  if (paid.length) {
+    document.getElementById("zoneGrid").innerHTML = paid.map(function (z) {
+      return "<div class='panel'><span class='eyebrow'>" + (z.type === "courier" ? "Courier" : "Our own driver") + "</span><h3 style='margin-top:6px'>" + z.name + " · " + (z.fee > 0 ? "$" + (+z.fee).toFixed(2) : "Free") + "</h3><p>" + (z.note || "") + "</p><div class='suburbs'>" + chips((z.suburbs || []).slice().sort()) + (z.postcodes && z.postcodes.length ? "<span>Postcodes " + z.postcodes.join(", ") + "</span>" : "") + "</div></div>";
+    }).join("");
+    document.getElementById("feeAreas").hidden = false;
+  }
+})();
+</script>
 </body>
 </html>
