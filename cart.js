@@ -389,7 +389,7 @@
       notes: draft.notes || "",
       payment: method,
       subtotal: sub, total: grand, gst: grand / 11,
-      preview: PREVIEW && !S.orderEndpoint
+      preview: PREVIEW && !S.orderEndpoint && !S.web3formsKey
     };
     // What the shop receives by email
     var data = {
@@ -419,14 +419,20 @@
       save([]); draft = {}; loc = null; locKey = ""; try { sessionStorage.removeItem("sf-draft"); } catch (e) {}
       go("confirmation");
     }
-    if (!S.orderEndpoint) {
+    if (!S.orderEndpoint && !S.web3formsKey) {
       if (order.preview) return finish();
       app.innerHTML = stepper(2) + "<div class='done'><h2>Online ordering isn't switched on yet</h2><p style='color:var(--muted);margin:12px 0 24px'>Please call us on <a href='" + telHref + "'>" + esc(S.phone) + "</a> and we'll take your order over the phone.</p><a class='btn btn-ghost' href='#payment'>← Back</a></div>";
       return;
     }
     var btn = document.getElementById("placeBtn"); btn.disabled = true; btn.textContent = "Placing your order…";
-    fetch(S.orderEndpoint, { method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json" }, body: JSON.stringify(data) })
-      .then(function (r) { if (!r.ok) throw new Error("send failed"); finish(); })
+    var url = S.orderEndpoint, body = data;
+    if (S.web3formsKey) {
+      url = "https://api.web3forms.com/submit";
+      body = Object.assign({ access_key: S.web3formsKey, subject: data._subject, from_name: "Southerden's website", replyto: data._replyto }, data);
+      delete body._subject; delete body._replyto;
+    }
+    fetch(url, { method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || j.success === false) throw new Error("send failed"); finish(); }); })
       .catch(function () {
         btn.disabled = false; btn.textContent = "Try again";
         alert("Sorry, your order didn't go through. Please try again or call " + S.phone + ".");

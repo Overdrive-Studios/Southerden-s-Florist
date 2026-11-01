@@ -31,4 +31,4 @@ Four steps on `cart.html`: **Cart** (items and add-ons) → **Delivery & details
 - Progress is kept if the page is refreshed. The confirmation can be printed or saved.
 - The order email to the shop includes the order number, payment method, delivery date, items, extras, delivery zone and fee, card message and contact details.
 - Payment: "Pay over the phone" is always offered. "Pay online by card" appears once `paymentLink` is set in `config.js`.
-- While `orderEndpoint` in `config.js` is empty, checkout asks customers to phone instead. To try the full flow without sending anything, open `cart.html?preview`.
+- Orders are emailed through Web3Forms: put the shop's access key in `web3formsKey` in `config.js` (Formspree also works via `orderEndpoint`). While both are empty, checkout asks customers to phone instead. To try the full flow without sending anything, open `cart.html?preview`.
