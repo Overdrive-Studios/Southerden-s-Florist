@@ -16,6 +16,7 @@ Static site (plain HTML/CSS/JS, no build step). Open `index.html` or host the fo
 - `styles.css`, `cart.js`, `config.js`
 
 ## Delivery areas and fees
+Settings: `delivery-zones.js`. Matching: `delivery-engine.js`.
 
 - At checkout the street address is looked up on the map (OpenStreetMap, free, no key), with address suggestions as the customer types.
 - If the address is inside a drawn `area` of a zone, that zone's fee applies. Zones are checked top to bottom.

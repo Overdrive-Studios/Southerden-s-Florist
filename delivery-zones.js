@@ -1,5 +1,5 @@
 // ==== Southerden's delivery zones ====
-// Controls delivery fees at checkout, the area lists on the Delivery page,
+// Controls delivery fees at checkout and the area lists on the Delivery page.
 //
 // HOW AN ADDRESS IS MATCHED
 // 1. The customer's street address is looked up on the map to get its exact location.
@@ -12,6 +12,7 @@
 // type: "free" = no charge, "extra" = our own driver with a fee, "courier" = handed to a courier.
 // sameDay: false = earliest delivery date is the next business day.
 // areas: list of shapes, each a list of [latitude, longitude] corner points.
+
 
 window.DELIVERY_ZONES = [
   {
