@@ -160,13 +160,26 @@
       box.hidden = false;
     }
     function pick(x) {
-      ad.value = x.street || ad.value;
+      // Street-only suggestion: keep the house/unit number the customer already typed (e.g. "12", "3/45", "Unit 2, 14")
+      var typed = ad.value.trim(), num = "";
+      var m = typed.match(/^(?:(?:unit|u|lot|shop|suite|level)\b\.?[\s,]*|[^\s,]*\d[^\s,]*[\s,]+)+/i);
+      if (m) num = typed.slice(0, m[0].length).replace(/[\s,]+$/, "");
+      var street = x.street || "";
+      if (!x.exact && num && street && street.toLowerCase().indexOf(num.toLowerCase()) !== 0) street = num + " " + street;
+      ad.value = street || ad.value;
       if (x.suburb) document.getElementById("sb").value = x.suburb;
       if (x.postcode) document.getElementById("pc").value = x.postcode;
       ["address", "suburb", "postcode"].forEach(function (n) { draft[n] = document.getElementById({ address: "ad", suburb: "sb", postcode: "pc" }[n]).value; });
       loc = { lat: x.lat, lng: x.lng, exact: x.exact }; draft._loc = loc;
       locKey = [fields().street, fields().suburb, fields().postcode].join("|").toLowerCase(); locating = null;
       close(); updateDelivery();
+      // Try to pin the exact house when the suggestion was only the street
+      if (!x.exact && num) {
+        var f = fields(), key = locKey;
+        DV.locate(f.street, f.suburb, f.postcode).then(function (r) {
+          if (r && r.exact && key === locKey) { loc = { lat: r.lat, lng: r.lng, exact: true }; draft._loc = loc; updateDelivery(); }
+        });
+      }
     }
     ad.addEventListener("input", function () {
       clearTimeout(timer);
