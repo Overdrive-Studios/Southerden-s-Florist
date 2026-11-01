@@ -24,3 +24,11 @@ Settings: `delivery-zones.js`. Matching: `delivery-engine.js`.
 - No match: the order still goes through, flagged **"delivery cost to be confirmed"**.
 - The order email includes the zone, fee, how it was matched and a Google Maps link to the address.
 - `sameDay: false` makes the earliest delivery date the next business day (for courier zones).
+
+## Checkout
+Four steps on `cart.html`: **Cart** (items and add-ons) → **Delivery & details** → **Payment** → **Confirmation** with an order number (e.g. `SF261101-4827`).
+
+- Progress is kept if the page is refreshed. The confirmation can be printed or saved.
+- The order email to the shop includes the order number, payment method, delivery date, items, extras, delivery zone and fee, card message and contact details.
+- Payment: "Pay over the phone" is always offered. "Pay online by card" appears once `paymentLink` is set in `config.js`.
+- While `orderEndpoint` in `config.js` is empty, checkout asks customers to phone instead. To try the full flow without sending anything, open `cart.html?preview`.
