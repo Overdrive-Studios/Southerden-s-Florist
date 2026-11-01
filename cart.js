@@ -269,7 +269,7 @@
     data.items = c.map(function (i) { return i.qty + " x " + i.name + " (" + money(i.price * i.qty) + ")"; }).join("\n");
     var d = DV.match(loc, data.suburb) || { unknown: true, name: UNKNOWN.name, fee: 0 };
     data.delivery = d.unknown ? "TO BE CONFIRMED: " + data.address + ", " + data.suburb + " " + data.postcode + " is not in a listed delivery area" : d.name + " (" + (d.fee > 0 ? money(d.fee) : "free") + ")";
-    data.delivery_matched_by = loc ? (loc.exact ? "exact address on the map" : "street on the map") + (d.km != null ? ", " + d.km.toFixed(1) + " km from the shop" : "") : "suburb name only (address not found on the map, please check)";
+    data.delivery_matched_by = loc ? (loc.exact ? "exact address on the map" : "street on the map") + (d.km != null ? ", " + d.km.toFixed(1) + " km from Highfields" : "") : "suburb name only (address not found on the map, please check)";
     if (loc) data.delivery_map = "https://www.google.com/maps/search/?api=1&query=" + loc.lat.toFixed(6) + "," + loc.lng.toFixed(6);
     data.delivery_fee = d.unknown ? "To be confirmed" : money(d.fee);
     data.subtotal = money(total(c));

@@ -4,7 +4,7 @@
 // HOW AN ADDRESS IS MATCHED
 // 1. The customer's street address is looked up on the map to get its exact location.
 // 2. Zones are checked top to bottom. A zone matches if the location is inside one of its
-//    drawn "areas", or within "maxKm" of the shop (straight-line distance).
+//    drawn "areas", or within "maxKm" of Highfields (straight-line distance).
 // 3. If the address can't be found on the map, the suburb name is checked against "suburbs".
 // 4. If nothing matches, the order still goes through, flagged "delivery cost to be confirmed".
 //
@@ -13,8 +13,7 @@
 // areas: list of shapes, each a list of [latitude, longitude] corner points.
 
 window.DELIVERY_SHOP = {
-  name: "Southerden's Florist",
-  address: "Highfields QLD",
+  name: "Highfields",
   lat: -27.4494276,
   lng: 151.9453192
 };
@@ -27,7 +26,7 @@ window.DELIVERY_ZONES = [
     fee: 0,
     sameDay: true,
     note: "Same-day delivery when ordered by 2pm Monday to Friday.",
-    maxKm: 0,          // e.g. 20 -> anywhere within 20 km of the shop
+    maxKm: 0,          // e.g. 20 -> anywhere within 20 km of Highfields
     areas: [],
     // Used only when an address can't be found on the map.
     suburbs: [

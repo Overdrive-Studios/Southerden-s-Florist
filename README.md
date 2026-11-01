@@ -18,8 +18,8 @@ Static site (plain HTML/CSS/JS, no build step). Open `index.html` or host the fo
 ## Delivery areas and fees
 
 - At checkout the street address is looked up on the map (OpenStreetMap, free, no key), with address suggestions as the customer types.
-- Zones are checked top to bottom. A zone matches if the address is inside one of its drawn `areas`, or within `maxKm` of the shop (straight line from Highfields).
+- Zones are checked top to bottom. A zone matches if the address is inside one of its drawn `areas`, or within `maxKm` of Highfields (straight line from the centre of Highfields).
 - If the address can't be found on the map, the suburb name is matched against each zone's `suburbs` list instead (also used until map areas are set up).
 - No match: the order still goes through, flagged **"delivery cost to be confirmed"**.
-- The order email includes the zone, fee, how it was matched, the distance from the shop and a Google Maps link.
+- The order email includes the zone, fee, how it was matched, the distance from Highfields and a Google Maps link.
 - `sameDay: false` makes the earliest delivery date the next business day (for courier zones).
