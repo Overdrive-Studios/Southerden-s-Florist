@@ -5,16 +5,19 @@
 <meta name="robots" content="noindex">
 <title>Southerden's Florist Toowoomba</title>
 <script>
-  // Any address that doesn't exist goes straight to the home page
+  // Old website addresses go to the matching new page; anything else goes to the home page.
   (function () {
+    var MAP = {"ids": {"p59515": "products/florist-choice-bouquet.html", "p40432": "products/simply-perfect.html", "p7": "products/elegant.html", "p15": "products/rainbow.html", "p81": "products/native-bouquet.html", "p80": "products/special-moments.html", "p219": "products/elegant-greens.html", "p88": "products/lemons-and-limes.html", "p8": "products/thank-you-bouquet.html", "p19": "products/fragrant-lilies.html", "p166657": "products/modern-and-bright.html", "p59514": "products/florist-choice-arrangement.html", "p61": "products/choice-traditional.html", "p68": "products/sunshine.html", "p21": "products/sweet-blooms.html", "p60": "products/boxed-blooms.html", "p86": "products/posy-bowl.html", "p231": "products/native-box.html", "p40429": "products/gina.html", "p40430": "products/gweneth.html", "p128": "products/nellie.html", "p40453": "products/old-world.html", "p59539": "products/purity.html", "p132": "products/lynette.html", "p90": "products/anthurium-plant.html", "p59517": "products/indoor-plant.html", "p166649": "products/traditional-bowl-arrangement.html", "p218": "products/grace.html", "p120": "products/a-line-perfection.html", "p74": "products/casket-spray.html", "p75": "products/formal-cross-with-centre-spray.html", "p73": "products/open-spray-floral-tribute.html", "p155": "products/native-sheaf.html", "p59538": "products/anzac-day-wreath.html", "p20406": "products/heart-wreath.html", "p154": "products/sympathy-wreath.html", "p59518": "products/native-wreath.html", "p76": "products/sympathy-basket-arrangement.html", "p229": "products/everlasting.html", "p40427": "products/baby-blooms.html", "p40426": "products/first-abc.html", "p25": "products/for-the-new-mum.html", "p22": "products/cuddle-with-style.html", "p23": "products/baby-boy-box-arrangement.html", "p24": "products/baby-girl-box-arrangement.html", "p84": "products/you-re-special.html", "p263": "products/large-baby-hamper.html", "p70": "products/healthy.html", "p56": "products/fruit-and-flowers.html", "p40425": "products/fruit-temptation.html", "p69": "products/mates-pack.html", "p134": "products/flavoursome-treats.html", "p41": "products/you-re-special-roses.html", "p46": "products/i-love-you.html", "p42": "products/simplicity.html", "p166658": "products/romance.html", "p166659": "products/red-roses-cylinder.html", "p93": "extras.html", "p92": "extras.html", "p94": "extras.html", "p31": "extras.html", "p95": "extras.html", "p107": "extras.html", "d6": "bouquets.html", "d7": "arrangements.html", "d5": "roses.html", "d9": "sympathy.html", "d10": "baby.html", "d8": "hampers.html", "d11": "extras.html"}, "named": {"about": "about.html", "contact": "contact.html", "terms": "terms.html", "privacy": "privacy.html", "basket": "cart.html"}};
     var parts = location.pathname.split("/").filter(Boolean);
     var base = location.hostname.endsWith("github.io") && parts.length ? "/" + parts[0] + "/" : "/";
-    location.replace(base);
+    var file = decodeURIComponent(parts[parts.length - 1] || "").toLowerCase().replace(/\.html?$/, "");
+    var id = (file.match(/^(p\d+|d\d+)/) || [])[1];
+    var target = (id && MAP.ids[id]) || MAP.named[file] || "";
+    location.replace(base + target);
   })();
 </script>
-<meta http-equiv="refresh" content="0; url=./">
 </head>
 <body style="font-family:system-ui,sans-serif;text-align:center;padding:60px 20px">
-<p><a href="./">Continue to Southerden's Florist</a></p>
+<p><a href="/">Continue to Southerden's Florist</a></p>
 </body>
 </html>
