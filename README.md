@@ -1,11 +1,11 @@
 # Southerden's Florist Toowoomba — website
 
-Static site (plain HTML/CSS/JS, no build step). Open `index.html` or host the folder anywhere.
+Plain HTML/CSS/JS site, hosted on Cloudflare Pages, with a little server code in `functions/` for orders and Stripe payments.
 
 ## Before going live
 1. **Photos** – run `python3 images/download-photos.py` once, while the old site is still up, to copy all product photos into `images/`.
 2. **Logo** – add the logo as `logo.png` in this folder; it appears in every page header automatically.
-3. **Orders** – in `config.js`, set `orderEndpoint` (e.g. a Formspree form URL) so orders are emailed to the shop. Optionally set `paymentLink` (Square/Stripe) to take card payment online.
+3. **Orders and payments** – see below.
 4. **Address** – add the street address on `contact.html`.
 
 ## Structure
@@ -30,5 +30,24 @@ Four steps on `cart.html`: **Cart** (items and add-ons) → **Delivery & details
 
 - Progress is kept if the page is refreshed. The confirmation can be printed or saved.
 - The order email to the shop includes the order number, payment method, delivery date, items, extras, delivery zone and fee, card message and contact details.
-- Payment: "Pay over the phone" is always offered. "Pay online by card" appears once `paymentLink` is set in `config.js`.
-- Orders are emailed through Web3Forms: put the shop's access key in `web3formsKey` in `config.js` (Formspree also works via `orderEndpoint`). While both are empty, checkout asks customers to phone instead. To try the full flow without sending anything, open `cart.html?preview`.
+- Payment: "Pay now by card" (Stripe) and "Pay over the phone". Card isn't offered for addresses outside the listed areas, since the delivery cost has to be confirmed first.
+- To try the flow without sending anything, open `cart.html?preview` on a copy with ordering switched off.
+
+## Orders and payments
+Server code in `functions/` (runs on Cloudflare Pages):
+- `api/checkout` checks every order: prices, options, delivery fee and date are worked out on the server from the site's own data files, never taken from the browser. Card orders go to Stripe Checkout; phone orders are emailed straight away.
+- `api/stripe-webhook` is called by Stripe when a payment completes and emails the paid order to the shop (marked PAID) and a confirmation to the customer. This works even if the customer closes the page after paying.
+- `api/order` shows the confirmation after paying; `api/status` tells checkout what's switched on.
+- `functions/_lib/catalog.js` is generated from `product-options.js`, `extras.js`, `delivery-zones.js`, `config.js` and the product pages by `node tools/build-catalog.mjs`. Cloudflare runs this on every deploy, so price or zone changes apply automatically.
+
+### Cloudflare Pages settings
+- Build command: `node tools/build-catalog.mjs`  · Output directory: `/` (leave blank)
+- Environment variables (Settings → Variables and secrets, as encrypted secrets):
+  - `STRIPE_SECRET_KEY` – from Stripe → Developers → API keys (`sk_test_...` while testing, `sk_live_...` when live)
+  - `STRIPE_WEBHOOK_SECRET` – from the Stripe webhook below (`whsec_...`)
+  - `RESEND_API_KEY` – from resend.com
+  - `SHOP_EMAIL` – where orders go (several allowed, comma separated)
+  - `FROM_EMAIL` – e.g. `Southerden's Florist <orders@southerdenflorist.com>` (domain verified in Resend)
+- Stripe webhook: Developers → Webhooks → add endpoint `https://YOUR-SITE/api/stripe-webhook`, events `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
+- While the Stripe key starts with `sk_test_`, checkout shows a test-mode note (card 4242 4242 4242 4242).
+- Without the email settings, checkout asks customers to phone instead.

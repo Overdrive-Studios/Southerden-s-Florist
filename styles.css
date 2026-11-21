@@ -621,3 +621,4 @@ select.pick:focus{outline:3px solid rgba(110,155,0,.25);outline-offset:1px}
 .fee-peek li b{font-family:Oswald,sans-serif;font-size:1.05rem;font-weight:500}
 .fee-peek li.inc b{color:var(--green);font-family:inherit;font-size:.88rem;font-weight:700}
 .fee-peek p{padding:8px 14px 12px;margin:0;font-size:.82rem;color:var(--muted);border-top:1px solid var(--line)}
+.notice.err{border-left-color:#b3261e;background:#fdf0ee;margin:18px 0 0}

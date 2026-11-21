@@ -152,7 +152,9 @@
   var DV = window.Delivery;
   var UNKNOWN = window.DELIVERY_UNKNOWN || { name: "Outside our listed areas" };
   var STEPS = [["cart", "Cart"], ["details", "Delivery & details"], ["payment", "Payment"], ["confirmation", "Confirmation"]];
-  var PREVIEW = /[?&]preview\b/.test(location.search);   // cart.html?preview shows the confirmation without sending
+  var PREVIEW = /[?&]preview\b/.test(location.search);
+  var CANCELLED = /[?&]cancelled\b/.test(location.search);   // back from Stripe without paying
+  if (CANCELLED) history.replaceState(null, "", location.pathname + location.hash);   // cart.html?preview shows the confirmation without sending
 
   // ---- saved progress (survives a page refresh) ----
   function sget(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch (e) { return null; } }
@@ -177,11 +179,18 @@
   (window.DELIVERY_ZONES || []).forEach(function (z) { (z.suburbs || []).forEach(function (x) { if (allSuburbs.indexOf(x) < 0) allSuburbs.push(x); }); });
   allSuburbs.sort();
 
-  // ---- payment methods (card appears once a payment link is set in config.js) ----
-  function payMethods() {
+  // ---- What's switched on (asks the server; on a host without it, only phone orders) ----
+  var LIVE = { orders: false, card: false, checked: false };
+  var statusReady = fetch(root + "api/status", { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+    .then(function (j) { LIVE = { orders: !!j.orders, card: !!j.card, test: !!j.test, checked: true }; })
+    .catch(function () { LIVE.checked = true; })
+    .then(function () { if ((location.hash || "").slice(1) === "payment") render(); });
+
+  function payMethods(d) {
     var m = [];
-    if (S.paymentLink) m.push({ id: "card", label: "Pay online by card", desc: "Pay securely by card on the next screen once your order is placed." });
-    m.push({ id: "phone", label: "Pay over the phone", desc: "We'll call you to take card payment before your order goes out." });
+    if (LIVE.card && !(d && d.unknown)) m.push({ id: "card", label: "Pay now by card", desc: "Visa, Mastercard, Amex, Apple Pay or Google Pay, on Stripe's secure payment page." });
+    if (LIVE.orders) m.push({ id: "phone", label: "Pay over the phone", desc: "We'll call you to take card payment before your order goes out." });
     return m;
   }
 
@@ -533,7 +542,8 @@
   function renderPayment(c) {
     var d = currentDelivery() || { unknown: true, name: UNKNOWN.name, fee: 0 };
     var grand = total(c) + (d.unknown ? 0 : d.fee);
-    var methods = payMethods(), chosen = draft.payment_method && methods.some(function (m) { return m.id === draft.payment_method; }) ? draft.payment_method : methods[0].id;
+    var methods = payMethods(d), chosen = draft.payment_method && methods.some(function (m) { return m.id === draft.payment_method; }) ? draft.payment_method : methods.length ? methods[0].id : "";
+    var cancelled = CANCELLED;
     var rev = function (title, body) { return "<div class='rev'><div class='rev-head'><h4>" + title + "</h4><a href='#details'>Edit</a></div>" + body + "</div>"; };
     app.innerHTML = stepper(2) + "<div class='checkout'><div class='checkout-main'><form class='order' id='payForm'>" +
       "<div class='panel'><h3>Check your order</h3>" +
@@ -542,88 +552,91 @@
       rev("Card message", "<p>" + (draft.card_message ? esc(draft.card_message).replace(/\n/g, "<br>") : "<span class='muted'>No card message</span>") + (draft.card_message ? "<br><span class='muted'>" + (draft.card_from ? "From: " + esc(draft.card_from) : "") + "</span>" : "") + "</p>") +
       rev("Your details", "<p>" + esc(draft.sender_name) + "<br>" + esc(draft.sender_phone) + "<br>" + esc(draft.email) + (draft.notes ? "<br><span class='muted'>Note: " + esc(draft.notes) + "</span>" : "") + "</p>") +
       "</div>" +
-      "<div class='panel'><h3>Payment</h3><div class='paylist'>" + methods.map(function (m) {
-        return "<label class='payopt'><input type='radio' name='payment_method' value='" + m.id + "'" + (m.id === chosen ? " checked" : "") + "><span><b>" + m.label + "</b><small>" + m.desc + "</small></span></label>";
-      }).join("") + "</div>" +
+      "<div class='panel'><h3>Payment</h3>" +
+      (cancelled ? "<div class='notice'>Payment cancelled. You haven't been charged. You can try again below.</div>" : "") +
+      (LIVE.test ? "<div class='notice'>Test mode: no real money is taken. Use card 4242 4242 4242 4242, any future date and any CVC.</div>" : "") +
+      (!LIVE.checked ? "<p class='muted'>Loading payment options…</p>" :
+        !methods.length && !PREVIEW ? "<div class='notice'>Online ordering isn't switched on yet. Please call us on <a href='" + telHref + "'>" + esc(S.phone) + "</a> and we'll take your order over the phone.</div>" :
+        "<div class='paylist'>" + methods.map(function (m) {
+          return "<label class='payopt'><input type='radio' name='payment_method' value='" + m.id + "'" + (m.id === chosen ? " checked" : "") + "><span><b>" + m.label + "</b><small>" + m.desc + "</small></span></label>";
+        }).join("") + "</div>" + (d.unknown && LIVE.card ? "<p class='muted' style='margin-top:10px'>Your address is outside our listed areas, so we'll call to confirm the delivery cost and take payment.</p>" : "")) +
+      "<input type='text' name='website' tabindex='-1' autocomplete='off' aria-hidden='true' style='position:absolute;left:-9999px;height:0;width:0;opacity:0'>" +
       "<label class='agree'><input type='checkbox' id='agree' required> I agree to the <a href='" + root + "terms.html' target='_blank'>Terms &amp; Conditions</a></label></div>" +
-      "<div class='step-nav'><a href='#details' class='btn btn-ghost'>← Back</a><button class='btn btn-primary' type='submit' id='placeBtn'>Place order · " + money(grand) + (d.unknown ? " + delivery" : "") + "</button></div>" +
+      "<div class='step-nav'><a href='#details' class='btn btn-ghost'>← Back</a><button class='btn btn-primary' type='submit' id='placeBtn'" + (!methods.length && !PREVIEW ? " disabled" : "") + ">" + (chosen === "card" ? "Pay " + money(grand) : "Place order · " + money(grand) + (d.unknown ? " + delivery" : "")) + "</button></div>" +
       "</form></div>" + summary(c, { step: "payment" }) + "</div>";
     var form = document.getElementById("payForm");
-    form.addEventListener("change", function (e) { if (e.target.name === "payment_method") { draft.payment_method = e.target.value; saveDraft(); } });
+    form.addEventListener("change", function (e) {
+      if (e.target.name !== "payment_method") return;
+      draft.payment_method = e.target.value; saveDraft();
+      document.getElementById("placeBtn").textContent = e.target.value === "card" ? "Pay " + money(grand) : "Place order · " + money(grand) + (d.unknown ? " + delivery" : "");
+    });
     form.addEventListener("submit", function (ev) { ev.preventDefault(); if (form.reportValidity()) placeOrder(form); });
   }
 
-  function orderNumber() {
-    var n = brisNow();
-    return "SF" + String(n.getFullYear()).slice(2) + String(n.getMonth() + 1).padStart(2, "0") + String(n.getDate()).padStart(2, "0") + "-" + String(Math.floor(1000 + Math.random() * 9000));
+  function finishOrder(order) {
+    sset("sf-last-order", order);
+    save([]); draft = {}; loc = null; locKey = ""; try { sessionStorage.removeItem("sf-draft"); } catch (e) {}
+    go("confirmation");
   }
 
   function placeOrder(form) {
     var c = load(); if (!hasFlowers(c)) return go("cart");
-    var d = currentDelivery() || { unknown: true, name: UNKNOWN.name, fee: 0, how: "none" };
     var method = (form.elements.payment_method || {}).value || "phone";
-    var sub = total(c), fee = d.unknown ? 0 : d.fee, grand = sub + fee;
-    var now = brisNow();
-    var order = {
-      number: orderNumber(),
-      placed: now.toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) + ", " + now.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }),
-      items: c.map(function (i) { return { name: i.name, opts: i.opts || "", qty: i.qty, price: i.price, extra: !!i.extra, img: i.img }; }),
-      delivery: { date: draft.delivery_date, zone: d.name, unknown: !!d.unknown, fee: fee, how: d.how },
-      recipient: { name: draft.recipient_name, place: draft.delivery_type || "home", detail: draft.place_detail || "", address: draft.address, suburb: draft.suburb, postcode: draft.postcode, phone: draft.recipient_phone },
-      card: draft.card_message || "", cardFrom: draft.card_from || "",
-      sender: { name: draft.sender_name, phone: draft.sender_phone, email: draft.email },
-      notes: draft.notes || "",
-      payment: method,
-      subtotal: sub, total: grand, gst: grand / 11,
-      preview: PREVIEW && !S.orderEndpoint && !S.web3formsKey
-    };
-    // What the shop receives by email
-    var data = {
-      order_number: order.number,
-      placed: order.placed,
-      payment: method === "card" ? "Paying online by card (check payment received)" : "PAY BY PHONE: call the customer to take payment",
-      delivery_date: nice(order.delivery.date),
-      recipient_name: order.recipient.name,
-      delivery_to: ({ home: "Home", work: "Workplace", hospital: "Hospital or care home", funeral: "Funeral or church" })[order.recipient.place] + (order.recipient.detail ? ": " + order.recipient.detail : ""),
-      address: order.recipient.address + ", " + order.recipient.suburb + " QLD " + order.recipient.postcode,
-      recipient_phone: order.recipient.phone,
-      card_message: order.card || "(none)",
-      card_from: order.card ? (order.cardFrom || "(not signed)") : "",
-      items: order.items.filter(function (i) { return !i.extra; }).map(function (i) { return i.qty + " x " + itemLabel(i) + " (" + money(i.price * i.qty) + ")"; }).join("\n"),
-      extras: order.items.filter(function (i) { return i.extra; }).map(function (i) { return i.qty + " x " + itemLabel(i) + " (" + money(i.price * i.qty) + ")"; }).join("\n") || "(none)",
-      delivery: d.unknown ? "TO BE CONFIRMED: not in a listed delivery area" : d.name + " (" + (fee > 0 ? money(fee) : "delivery included") + ")",
-      delivery_matched_by: d.how === "area" ? "address is inside the " + d.name + " area on the map" : d.how === "suburb" ? "suburb name (" + order.recipient.suburb + ")" + (loc ? "" : ", address not found on the map") : "no match, please check",
-      subtotal: money(sub),
-      total: money(grand) + (d.unknown ? " + delivery (to be confirmed)" : ""),
-      sender_name: order.sender.name, sender_phone: order.sender.phone, email: order.sender.email,
-      notes: order.notes || "(none)",
-      _subject: "Order " + order.number + " for " + order.recipient.name + " (" + nice(order.delivery.date) + ")",
-      _replyto: order.sender.email
-    };
-    data.delivery_map = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(data.address + ", Australia");
+    var btn = document.getElementById("placeBtn");
 
-    function finish() {
-      sset("sf-last-order", order);
-      save([]); draft = {}; loc = null; locKey = ""; try { sessionStorage.removeItem("sf-draft"); } catch (e) {}
-      go("confirmation");
+    // ?preview with ordering switched off: show the confirmation without sending anything
+    if (PREVIEW && !LIVE.orders) {
+      var d = currentDelivery() || { unknown: true, name: UNKNOWN.name, fee: 0 }, sub = total(c), fee = d.unknown ? 0 : d.fee;
+      return finishOrder({
+        number: "SF-PREVIEW", placed: brisNow().toLocaleString("en-AU"), preview: true, payment: method,
+        items: c.map(function (i) { return { name: i.name, opts: i.opts || "", qty: i.qty, price: i.price, extra: !!i.extra }; }),
+        delivery: { date: draft.delivery_date, zone: d.name, unknown: !!d.unknown, fee: fee },
+        recipient: { name: draft.recipient_name, place: draft.delivery_type || "home", detail: draft.place_detail || "", address: draft.address, suburb: draft.suburb, postcode: draft.postcode, phone: draft.recipient_phone },
+        card: draft.card_message || "", cardFrom: draft.card_from || "",
+        sender: { name: draft.sender_name, phone: draft.sender_phone, email: draft.email }, notes: draft.notes || "",
+        subtotal: sub, total: sub + fee, gst: (sub + fee) / 11
+      });
     }
-    if (!S.orderEndpoint && !S.web3formsKey) {
-      if (order.preview) return finish();
-      app.innerHTML = stepper(2) + "<div class='done'><h2>Online ordering isn't switched on yet</h2><p style='color:var(--muted);margin:12px 0 24px'>Please call us on <a href='" + telHref + "'>" + esc(S.phone) + "</a> and we'll take your order over the phone.</p><a class='btn btn-ghost' href='#payment'>← Back</a></div>";
-      return;
-    }
-    var btn = document.getElementById("placeBtn"); btn.disabled = true; btn.textContent = "Placing your order…";
-    var url = S.orderEndpoint, body = data;
-    if (S.web3formsKey) {
-      url = "https://api.web3forms.com/submit";
-      body = Object.assign({ access_key: S.web3formsKey, subject: data._subject, from_name: "Southerden's website", replyto: data._replyto }, data);
-      delete body._subject; delete body._replyto;
-    }
-    fetch(url, { method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json" }, body: JSON.stringify(body) })
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || j.success === false) throw new Error("send failed"); finish(); }); })
-      .catch(function () {
+
+    CANCELLED = false;
+    btn.disabled = true; btn.textContent = method === "card" ? "Opening secure payment…" : "Placing your order…";
+    var payload = {
+      payment: method,
+      website: (form.elements.website || {}).value || "",
+      cart: c.map(function (i) { return { id: i.id, qty: i.qty, opts: i.opts || "", extra: !!i.extra }; }),
+      details: Object.assign({}, draft, { address: undefined })
+    };
+    fetch(root + "api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || j.error) throw new Error(j.error || "Sorry, your order didn't go through."); return j; }); })
+      .then(function (j) {
+        if (j.url) { location.href = j.url; return; }      // off to Stripe
+        finishOrder(j.order);
+      })
+      .catch(function (e) {
         btn.disabled = false; btn.textContent = "Try again";
-        alert("Sorry, your order didn't go through. Please try again or call " + S.phone + ".");
+        var box = document.getElementById("orderErr");
+        if (!box) { box = document.createElement("div"); box.id = "orderErr"; box.className = "notice err"; btn.closest(".step-nav").before(box); }
+        box.innerHTML = esc(e.message || "Sorry, your order didn't go through.") + " Or call us on <a href='" + telHref + "'>" + esc(S.phone) + "</a>.";
+        box.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+  }
+
+  // Back from Stripe: cart.html?paid=cs_...#confirmation
+  var paidId = (location.search.match(/[?&]paid=(cs_[A-Za-z0-9_]+)/) || [])[1];
+  function confirmPayment(tries) {
+    app.innerHTML = stepper(3) + "<div class='done'><h2>Confirming your payment…</h2><p class='muted'>This only takes a moment.</p></div>";
+    fetch(root + "api/order?session_id=" + paidId, { cache: "no-store" })
+      .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
+      .then(function (res) {
+        if (res.j.paid) {
+          history.replaceState(null, "", location.pathname + "#confirmation");
+          paidId = null; finishOrder(res.j.order); return;
+        }
+        if (res.status === 402 && tries < 5) return setTimeout(function () { confirmPayment(tries + 1); }, 2000);
+        throw 0;
+      })
+      .catch(function () {
+        app.innerHTML = stepper(3) + "<div class='done'><h2>We couldn't confirm your payment here</h2><p class='muted' style='margin:12px 0 24px'>If you were charged, your order has come through to us and you'll get an email confirmation. If you're unsure, please call us on <a href='" + telHref + "'>" + esc(S.phone) + "</a>.</p></div>";
       });
   }
 
@@ -632,8 +645,8 @@
     var flowers = o.items.filter(function (i) { return !i.extra; }), extras = o.items.filter(function (i) { return i.extra; });
     var row = function (i) { return "<tr><td>" + esc(i.name) + (i.qty > 1 ? " × " + i.qty : "") + (i.opts ? "<br><small class='muted'>" + esc(i.opts) + "</small>" : "") + "</td><td>" + money(i.price * i.qty) + "</td></tr>"; };
     var next = o.payment === "card"
-      ? "<li><b>Complete your payment</b> using the button below. Please include your order number <b>" + o.number + "</b>.</li><li>We'll prepare your order once payment is received.</li>"
-      : "<li><b>We'll call you</b> on " + esc(o.sender.phone) + " to confirm your order and take payment.</li><li>We'll then prepare your flowers fresh for delivery.</li>";
+      ? "<li><b>Payment received.</b> Thank you, you're all paid" + (o.paid ? " (" + money(o.paid) + ")" : "") + ".</li><li>We've emailed a confirmation to " + esc(o.sender.email) + ".</li><li>We'll prepare your flowers fresh for delivery.</li>"
+      : "<li><b>We'll call you</b> on " + esc(o.sender.phone) + " to confirm your order and take payment.</li>" + (o.preview ? "" : "<li>We've emailed a copy of your order to " + esc(o.sender.email) + ".</li>") + "<li>We'll then prepare your flowers fresh for delivery.</li>";
     if (o.delivery.unknown) next += "<li>Your address is outside our listed areas, so we'll confirm delivery options and any cost when we call.</li>";
     next += "<li>Delivery on <b>" + esc(nice(o.delivery.date)) + "</b>.</li>";
     app.innerHTML = stepper(3) +
@@ -642,7 +655,7 @@
       "<div class='confirm-head'><div class='tick'>✓</div><span class='eyebrow'>Thank you, " + esc(o.sender.name.split(" ")[0]) + "</span><h2>Your order has been placed</h2>" +
       "<div class='ordno'><small>Order number</small><b>" + o.number + "</b></div><p class='muted'>Placed " + esc(o.placed) + ". Please keep your order number for reference.</p></div>" +
       "<div class='panel'><h3>What happens next</h3><ol class='nextsteps'>" + next + "</ol>" +
-      (o.payment === "card" && S.paymentLink ? "<a class='btn btn-primary' href='" + esc(S.paymentLink) + "' target='_blank' rel='noopener'>Complete payment · " + money(o.total) + "</a>" : "") + "</div>" +
+"</div>" +
       "<div class='confirm-grid'>" +
       "<div class='panel'><h3>Delivery</h3><p><b>" + esc(o.recipient.name) + "</b><br>" + (o.recipient.detail ? esc(o.recipient.detail) + "<br>" : "") + esc(o.recipient.address) + "<br>" + esc(o.recipient.suburb) + " QLD " + esc(o.recipient.postcode) + "<br>" + esc(o.recipient.phone) + "</p><p>" + esc(nice(o.delivery.date)) + "<br>" + esc(o.delivery.zone) + "</p>" +
       "<h4 style='margin-top:14px'>Card message</h4><p>" + (o.card ? esc(o.card).replace(/\n/g, "<br>") + (o.cardFrom ? "<br><span class='muted'>" + "From: " + esc(o.cardFrom) + "</span>" : "") : "<span class='muted'>No card message</span>") + "</p></div>" +
@@ -651,7 +664,7 @@
       "<tr><td>" + (o.delivery.unknown ? "Delivery" : esc(o.delivery.zone)) + "</td><td>" + (o.delivery.unknown ? "To be confirmed" : o.delivery.fee > 0 ? money(o.delivery.fee) : "Included") + "</td></tr>" +
       "<tr class='grand'><td>Total</td><td>" + money(o.total) + (o.delivery.unknown ? " + delivery" : "") + "</td></tr>" +
       "<tr class='gst'><td>Includes GST of</td><td>" + money(o.gst) + "</td></tr></table>" +
-      "<p class='muted' style='margin-top:12px'>Payment: " + (o.payment === "card" ? "online by card" : "over the phone") + "<br>Ordered by " + esc(o.sender.name) + " · " + esc(o.sender.email) + "</p></div>" +
+      "<p class='muted' style='margin-top:12px'>Payment: " + (o.payment === "card" ? "paid online by card" : "over the phone") + "<br>Ordered by " + esc(o.sender.name) + " · " + esc(o.sender.email) + "</p></div>" +
       "</div>" +
       "<div class='step-nav no-print'><button type='button' class='btn btn-ghost' onclick='window.print()'>Print or save</button><a class='btn btn-primary' href='" + root + "index.html'>Continue shopping</a></div>" +
       "<p class='muted' style='text-align:center;margin-top:18px'>Questions about your order? Call <a href='" + telHref + "'>" + esc(S.phone) + "</a> and quote " + o.number + ".</p>" +
@@ -660,6 +673,7 @@
 
   // ---- Router ----
   function render() {
+    if (paidId) return confirmPayment(0);
     var step = (location.hash || "#cart").slice(1), c = load();
     if (step === "confirmation") { var o = sget("sf-last-order"); if (o) return renderConfirmation(o); step = "cart"; }
     if (!c.length) {
